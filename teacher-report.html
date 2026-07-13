@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="site.title">华联中学 - 学生评语系统</title>
+  
+  <!-- Pico.css v2 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- Google Fonts Outfit & Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Style overrides -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="container">
+      <nav>
+        <ul>
+          <li>
+            <strong style="font-size: 1.2rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-graduation-cap" style="color: var(--pico-primary);"></i>
+              <span data-i18n="parent.school">华联中学</span>
+            </strong>
+          </li>
+        </ul>
+        <ul style="display: flex; align-items: center; gap: 1rem;">
+          <li>
+            <span id="user-display" style="font-size: 0.85rem; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 0.25rem 0.75rem; border-radius: 12px;"></span>
+          </li>
+          <li id="nav-dashboard-link" style="display: none;">
+            <a href="form-teacher.html" class="outline" style="font-size: 0.85rem; padding: 0.25rem 0.5rem;" data-i18n="nav.dashboard">班主任后台</a>
+          </li>
+          <li>
+            <a href="#" onclick="showChangePwdModal()" style="font-size: 0.85rem;" data-i18n="nav.change_pwd">修改密码</a>
+          </li>
+          <li>
+            <a href="#" onclick="ReportAPI.logout()" style="color: #ef4444; font-size: 0.85rem;" data-i18n="nav.logout">退出登录</a>
+          </li>
+          <li>
+            <!-- Lang Switcher inside navbar -->
+            <div class="lang-switcher">
+              <button onclick="setLang('zh')" id="lang-btn-zh">中</button>
+              <button onclick="setLang('en')" id="lang-btn-en">EN</button>
+              <button onclick="setLang('ms')" id="lang-btn-ms">BM</button>
+            </div>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main class="container">
+    
+    <!-- Subject Selector -->
+    <div class="grid" style="grid-template-columns: 1fr; margin-bottom: 1.5rem;">
+      <article style="padding: 1rem; margin-bottom: 0;">
+        <label for="subject-select" style="margin-bottom: 0; font-weight: 600;">
+          <i class="fa-solid fa-book-open"></i> <span data-i18n="report.subject_select">选择负责科目</span>
+          <select id="subject-select" onchange="switchSubject()"></select>
+        </label>
+      </article>
+    </div>
+
+    <!-- Main Recording Workspace -->
+    <div class="grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;" id="workspace-grid">
+      
+      <!-- Left Column: Student List -->
+      <section>
+        <article style="padding: 1rem; height: 600px; display: flex; flex-direction: column; overflow: hidden;" class="premium-card">
+          <header style="padding: 0 0 0.5rem 0; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+            <h4 data-i18n="report.active_students" style="margin: 0; font-size: 1rem; font-weight: 700;">在籍学生列表</h4>
+            <span id="student-count-badge" style="font-size: 0.75rem; background: #cbd5e1; color: #334155; padding: 0.1rem 0.5rem; border-radius: 10px; font-weight: 600;">0/0</span>
+          </header>
+          
+          <!-- Progress Bar Container -->
+          <div style="margin-bottom: 0.75rem;" id="progress-container">
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; margin-bottom:0.25rem; color:#475569;">
+              <span>进度 / Progress</span>
+              <span id="progress-text">0% (0/0)</span>
+            </div>
+            <progress id="subject-progress" value="0" max="100" style="margin-bottom:0; height:8px;"></progress>
+          </div>
+
+          <!-- Search Box -->
+          <input type="search" id="search-box" placeholder="搜索学号/名字..." oninput="filterStudents()" style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+          
+          <!-- Scrolling List container -->
+          <div style="flex: 1; overflow-y: auto;" id="students-list">
+            <!-- Dynamic entries go here -->
+          </div>
+
+          <!-- Bottom Actions -->
+          <footer style="margin-top: 0.5rem; padding: 0.5rem 0 0 0; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem;">
+            <button id="batch-complete-btn" class="secondary" style="font-size: 0.8rem; flex: 1.2; padding: 0.5rem; margin-bottom: 0;" onclick="batchMarkComplete()">
+              <i class="fa-solid fa-check-double"></i> <span data-i18n="report.batch_complete">标记本科全班已完成</span>
+            </button>
+            <button id="export-comments-btn" class="outline" style="font-size: 0.8rem; flex: 0.8; padding: 0.5rem; margin-bottom: 0; color: #10b981; border-color: #10b981;" onclick="exportSubjectComments()">
+              <i class="fa-solid fa-file-export"></i> <span>导出评语 / Export</span>
+            </button>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Right Column: Recording Panel -->
+      <section>
+        <article style="padding: 1.5rem; height: 600px; display: flex; flex-direction: column; justify-content: space-between;" class="premium-card" id="recording-card">
+          <div id="recording-form-container">
+            <!-- Student Header Profile Details -->
+            <div class="student-profile-container">
+              <div id="student-avatar" class="student-avatar"></div>
+              <div style="flex: 1;">
+                <h3 id="student-name" style="margin: 0 0 0.25rem 0; font-weight: 800;"></h3>
+                <h5 id="student-name-en" style="margin: 0 0 0.5rem 0; color: #718096; font-size: 0.95rem;"></h5>
+                
+                <div class="student-info-grid">
+                  <div class="student-info-item">
+                    <span class="label" data-i18n="report.student_no">学号</span>
+                    <span id="student-number" style="font-weight: 600;"></span>
+                  </div>
+                  <div class="student-info-item">
+                    <span class="label" data-i18n="report.gender">性别</span>
+                    <span id="student-gender"></span>
+                  </div>
+                  <div class="student-info-item">
+                    <span class="label" data-i18n="report.boarding">是否住宿</span>
+                    <span id="student-boarding"></span>
+                  </div>
+                  <div class="student-info-item" style="grid-column: span 2;">
+                    <span class="label" data-i18n="report.siblings">在校兄弟姐妹/亲戚</span>
+                    <span id="student-siblings" style="font-size: 0.85rem; font-weight: 600; color: #2563eb;"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comment Input -->
+            <label for="feedback-input">
+              <span data-i18n="report.feedback" style="font-weight: 600;">任课老师评语</span>
+              <textarea id="feedback-input" rows="8" placeholder="在此录入分科评语..." data-i18n="report.feedback.placeholder" oninput="markUnsaved()"></textarea>
+            </label>
+          </div>
+
+          <!-- Actions -->
+          <footer style="margin-top: 1rem; border-top: none; padding-top: 0; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <label for="complete-checkbox" style="margin-bottom: 0; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="complete-checkbox" style="margin-bottom: 0;" onchange="markUnsaved()">
+                <span data-i18n="report.status.complete" style="font-weight: 600; font-size: 0.95rem;">已完成</span>
+              </label>
+              
+              <span id="save-status-msg" class="save-status"></span>
+            </div>
+
+            <button id="save-comment-btn" style="padding: 0.5rem 1.5rem; margin-bottom: 0;" onclick="saveCurrentComment()">
+              <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="report.save">保存此条评语</span>
+            </button>
+          </footer>
+        </article>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- PASSWORD CHANGE MODAL -->
+  <dialog id="change-pwd-modal">
+    <article style="width: 100%; max-width: 440px;">
+      <header>
+        <h4 data-i18n="pwd.title" style="margin: 0; font-weight: 800;">修改个人密码</h4>
+      </header>
+      <form id="pwd-form" onsubmit="changePasswordSubmit(event)">
+        <!-- Modal Error Msg -->
+        <div id="pwd-error" style="display: none; padding: 0.5rem; background: #fee2e2; color: #b91c1c; font-size: 0.8rem; border-radius: 6px; margin-bottom: 1rem;"></div>
+        
+        <label for="pwd-old">
+          <span data-i18n="pwd.old">原密码</span>
+          <input type="password" id="pwd-old" required>
+        </label>
+        <label for="pwd-new">
+          <span data-i18n="pwd.new">新密码</span>
+          <input type="password" id="pwd-new" required>
+        </label>
+        <label for="pwd-confirm">
+          <span data-i18n="pwd.confirm">确认新密码</span>
+          <input type="password" id="pwd-confirm" required>
+        </label>
+        
+        <footer style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-bottom: 0;">
+          <button type="button" class="secondary" onclick="closeChangePwdModal()" data-i18n="pwd.cancel">取消</button>
+          <button type="submit" data-i18n="pwd.submit">修改密码</button>
+        </footer>
+      </form>
+    </article>
+  </dialog>
+
+  <!-- JS Modules -->
+  <script src="js/auth.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/report-api.js"></script>
+  <script>
+    let rawSubjectsData = [];
+    let currentSubjectIndex = -1;
+    let selectedStudentIndex = -1;
+    let isUnsaved = false;
+
+    // Load active language button on start
+    document.addEventListener('DOMContentLoaded', async () => {
+      const activeLang = getLang();
+      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('lang-btn-' + activeLang);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Populate User display in Header
+      const user = getUser();
+      if (user) {
+        let nameText = user.display_name;
+        if (getLang() === 'en') nameText = user.display_name_en;
+        else if (getLang() === 'ms') nameText = user.display_name_ms;
+        
+        document.getElementById('user-display').textContent = nameText;
+        if (user.role === 'form_teacher') {
+          document.getElementById('nav-dashboard-link').style.display = 'block';
+        }
+      }
+
+      // Load subjects data
+      await loadSubjectData();
+    });
+
+    document.addEventListener('langChanged', (e) => {
+      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('lang-btn-' + e.detail.lang);
+      if (activeBtn) activeBtn.classList.add('active');
+      
+      // Update UI texts depending on language
+      const user = getUser();
+      if (user) {
+        let nameText = user.display_name;
+        if (e.detail.lang === 'en') nameText = user.display_name_en;
+        else if (e.detail.lang === 'ms') nameText = user.display_name_ms;
+        document.getElementById('user-display').textContent = nameText;
+      }
+      
+      rebuildSubjectOptions();
+      renderStudentsList();
+      renderActiveStudentProfile();
+    });
+
+    // Load subject and student mapping from worker
+    async function loadSubjectData() {
+      try {
+        const data = await ReportAPI.getMyReports();
+        rawSubjectsData = data.subjects || [];
+        if (rawSubjectsData.length === 0) {
+          document.getElementById('workspace-grid').innerHTML = `
+            <article class="premium-card" style="text-align: center; padding: 3rem; width: 100%;">
+              <i class="fa-solid fa-folder-open" style="font-size: 3rem; color: #a0aec0; margin-bottom: 1rem;"></i>
+              <p data-i18n="report.no_subjects">${t('report.no_subjects')}</p>
+            </article>
+          `;
+          return;
+        }
+        rebuildSubjectOptions();
+        currentSubjectIndex = 0;
+        document.getElementById('subject-select').value = rawSubjectsData[0].code;
+        
+        // Select first student
+        selectedStudentIndex = 0;
+        renderStudentsList();
+        renderActiveStudentProfile();
+      } catch (err) {
+        alert('无法加载科目数据: ' + err.message);
+      }
+    }
+
+    function rebuildSubjectOptions() {
+      const select = document.getElementById('subject-select');
+      if (!select) return;
+      
+      const currentVal = select.value;
+      select.innerHTML = '';
+      rawSubjectsData.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.code;
+        
+        let subDisp = sub.display_name;
+        if (getLang() === 'en') subDisp = sub.display_name_en;
+        else if (getLang() === 'ms') subDisp = sub.display_name_ms;
+        
+        if (sub.emoji) {
+          subDisp = sub.emoji + ' ' + subDisp;
+        }
+        
+        option.textContent = subDisp;
+        select.appendChild(option);
+      });
+      
+      if (currentVal) select.value = currentVal;
+    }
+
+    function switchSubject() {
+      if (isUnsaved) {
+        if (!confirm('当前评语未保存，确定要切换科目吗？\nUnsaved changes will be lost. Proceed?')) {
+          document.getElementById('subject-select').value = rawSubjectsData[currentSubjectIndex].code;
+          return;
+        }
+      }
+      
+      const code = document.getElementById('subject-select').value;
+      currentSubjectIndex = rawSubjectsData.findIndex(s => s.code === code);
+      selectedStudentIndex = 0;
+      isUnsaved = false;
+      
+      renderStudentsList();
+      renderActiveStudentProfile();
+    }
+
+    // Render left panel list of students
+    function renderStudentsList() {
+      const listContainer = document.getElementById('students-list');
+      if (!listContainer || currentSubjectIndex === -1) return;
+
+      const students = rawSubjectsData[currentSubjectIndex].students || [];
+      const searchQuery = document.getElementById('search-box').value.toLowerCase().trim();
+
+      listContainer.innerHTML = '';
+      
+      let matchCount = 0;
+      students.forEach((st, idx) => {
+        const stName = st.name.toLowerCase();
+        const stNameEn = st.name_en.toLowerCase();
+        const stNo = st.student_number.toLowerCase();
+        
+        // Apply search filter
+        if (searchQuery && !stName.includes(searchQuery) && !stNameEn.includes(searchQuery) && !stNo.includes(searchQuery)) {
+          return;
+        }
+        matchCount++;
+
+        const item = document.createElement('div');
+        item.className = 'student-list-item' + (idx === selectedStudentIndex ? ' selected' : '');
+        item.onclick = () => selectStudent(idx);
+
+        const initials = st.name.substring(0, 1);
+        const hasFeedback = (st.feedback || '').trim().length > 0;
+        const isComplete = st.is_complete === 1;
+
+        let badgeClass = 'none';
+        let badgeText = t('ft.matrix.status.none');
+        if (isComplete) {
+          badgeClass = 'done';
+          badgeText = t('report.status.complete');
+        } else if (hasFeedback) {
+          badgeClass = 'pending';
+          badgeText = t('report.status.incomplete');
+        }
+
+        item.innerHTML = `
+          <div class="student-details">
+            <div class="small-avatar">${initials}</div>
+            <div>
+              <div style="font-weight:600; font-size:0.9rem;">${st.name}</div>
+              <div style="font-size:0.75rem; color:#718096;">${st.student_number} | ${st.name_en}</div>
+            </div>
+          </div>
+          <span class="status-badge ${badgeClass}">${badgeText}</span>
+        `;
+        
+        listContainer.appendChild(item);
+      });
+
+      document.getElementById('student-count-badge').textContent = `${matchCount}/${students.length}`;
+      updateProgressBar();
+    }
+
+    function updateProgressBar() {
+      if (currentSubjectIndex === -1) return;
+      const students = rawSubjectsData[currentSubjectIndex].students || [];
+      const total = students.length;
+      const completed = students.filter(st => st.is_complete === 1).length;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      const progBar = document.getElementById('subject-progress');
+      const progText = document.getElementById('progress-text');
+      if (progBar && progText) {
+        progBar.value = percentage;
+        progText.textContent = `${percentage}% (${completed}/${total})`;
+      }
+    }
+
+    function exportSubjectComments() {
+      if (currentSubjectIndex === -1) return;
+      const subject = rawSubjectsData[currentSubjectIndex];
+      const students = subject.students || [];
+      
+      let subName = subject.display_name;
+      if (getLang() === 'en') subName = subject.display_name_en;
+      else if (getLang() === 'ms') subName = subject.display_name_ms;
+
+      // CSV Content with BOM for Excel UTF-8 support
+      let csvContent = "\ufeff";
+      csvContent += "学号/ID,姓名/Chinese Name,英文姓名/English Name,性别/Gender,住宿/Hostel,评语/Comment,状态/Status\n";
+      
+      students.forEach(st => {
+        const genderText = st.gender === 'M' ? t('report.gender.m') : t('report.gender.f');
+        const boardingText = st.is_boarding === 1 ? t('report.boarding.yes') : t('report.boarding.no');
+        const statusText = st.is_complete === 1 ? t('report.status.complete') : t('report.status.incomplete');
+        
+        let comment = st.feedback || '';
+        // Escape quotes
+        comment = comment.replace(/"/g, '""');
+        
+        csvContent += `"${st.student_number}","${st.name}","${st.name_en}","${genderText}","${boardingText}","${comment}","${statusText}"\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `评语导出_${subName}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function filterStudents() {
+      renderStudentsList();
+    }
+
+    function selectStudent(idx) {
+      if (isUnsaved) {
+        if (!confirm('当前评语未保存，确定要切换学生吗？\nUnsaved changes will be lost. Proceed?')) {
+          return;
+        }
+      }
+      selectedStudentIndex = idx;
+      isUnsaved = false;
+      
+      // Update selected item visual styling
+      document.querySelectorAll('.student-list-item').forEach((item, index) => {
+        if (index === idx) item.classList.add('selected');
+        else item.classList.remove('selected');
+      });
+
+      renderActiveStudentProfile();
+    }
+
+    // Render right panel details & inputs
+    function renderActiveStudentProfile() {
+      const container = document.getElementById('recording-card');
+      if (currentSubjectIndex === -1 || selectedStudentIndex === -1) {
+        container.style.visibility = 'hidden';
+        return;
+      }
+      container.style.visibility = 'visible';
+
+      const student = rawSubjectsData[currentSubjectIndex].students[selectedStudentIndex];
+      
+      // Avatar initials or load from directory
+      const avatar = document.getElementById('student-avatar');
+      avatar.textContent = student.name.substring(0, 1);
+      // Optional: if student photo URL is verified to load, we can style it
+      avatar.style.background = getAvatarColor(student.student_number);
+
+      document.getElementById('student-name').textContent = student.name;
+      document.getElementById('student-name-en').textContent = student.name_en;
+      document.getElementById('student-number').textContent = student.student_number;
+      
+      document.getElementById('student-gender').textContent = student.gender === 'M' ? t('report.gender.m') : t('report.gender.f');
+      document.getElementById('student-boarding').textContent = student.is_boarding === 1 ? t('report.boarding.yes') : t('report.boarding.no');
+      
+      const siblingEl = document.getElementById('student-siblings');
+      if (student.siblings) {
+        siblingEl.textContent = student.siblings;
+        siblingEl.parentElement.style.display = 'block';
+      } else {
+        siblingEl.parentElement.style.display = 'none';
+      }
+
+      // Load existing comment values
+      document.getElementById('feedback-input').value = student.feedback || '';
+      document.getElementById('complete-checkbox').checked = student.is_complete === 1;
+      
+      // Clear status message
+      const statusMsg = document.getElementById('save-status-msg');
+      statusMsg.className = 'save-status';
+      statusMsg.textContent = '';
+      
+      isUnsaved = false;
+    }
+
+    function getAvatarColor(studentNo) {
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e'];
+      const index = parseInt(studentNo) % colors.length || 0;
+      return colors[index];
+    }
+
+    function markUnsaved() {
+      isUnsaved = true;
+      const statusMsg = document.getElementById('save-status-msg');
+      statusMsg.className = 'save-status';
+      statusMsg.textContent = '● 未保存 / Unsaved';
+      statusMsg.style.color = '#eab308';
+      statusMsg.classList.add('show');
+    }
+
+    // Save current student's comment to database
+    async function saveCurrentComment() {
+      if (currentSubjectIndex === -1 || selectedStudentIndex === -1) return;
+      
+      const student = rawSubjectsData[currentSubjectIndex].students[selectedStudentIndex];
+      const subjectCode = rawSubjectsData[currentSubjectIndex].code;
+      const feedbackVal = document.getElementById('feedback-input').value;
+      const isCompleteVal = document.getElementById('complete-checkbox').checked;
+
+      const saveBtn = document.getElementById('save-comment-btn');
+      const statusMsg = document.getElementById('save-status-msg');
+
+      saveBtn.setAttribute('aria-busy', 'true');
+      saveBtn.disabled = true;
+      
+      statusMsg.className = 'save-status success show';
+      statusMsg.textContent = t('report.saving');
+
+      try {
+        await ReportAPI.saveReport(student.id, subjectCode, feedbackVal, isCompleteVal);
+        
+        // Update local memory data
+        student.feedback = feedbackVal;
+        student.is_complete = isCompleteVal ? 1 : 0;
+        
+        statusMsg.textContent = t('report.saved');
+        isUnsaved = false;
+        
+        // Refresh Left List to update status badge
+        renderStudentsList();
+      } catch (err) {
+        statusMsg.className = 'save-status error show';
+        statusMsg.textContent = '❌ 保存失败: ' + err.message;
+      } finally {
+        saveBtn.removeAttribute('aria-busy');
+        saveBtn.disabled = false;
+      }
+    }
+
+    // Batch mark complete for current subject
+    async function batchMarkComplete() {
+      if (currentSubjectIndex === -1) return;
+      if (!confirm(t('report.batch.confirm'))) return;
+
+      const subjectCode = rawSubjectsData[currentSubjectIndex].code;
+      const btn = document.getElementById('batch-complete-btn');
+      btn.setAttribute('aria-busy', 'true');
+      btn.disabled = true;
+
+      try {
+        await ReportAPI.markSubjectComplete(subjectCode);
+        
+        // Update local memory data for all students
+        rawSubjectsData[currentSubjectIndex].students.forEach(st => {
+          st.is_complete = 1;
+        });
+
+        alert('本科全部评语标记完成！');
+        renderStudentsList();
+        renderActiveStudentProfile();
+      } catch (err) {
+        alert('操作失败: ' + err.message);
+      } finally {
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+      }
+    }
+
+    // CHANGE PASSWORD MODAL HELPERS
+    function showChangePwdModal() {
+      document.getElementById('pwd-error').style.display = 'none';
+      document.getElementById('pwd-form').reset();
+      document.getElementById('change-pwd-modal').showModal();
+    }
+
+    function closeChangePwdModal() {
+      document.getElementById('change-pwd-modal').close();
+    }
+
+    async function changePasswordSubmit(e) {
+      e.preventDefault();
+      const oldPwd = document.getElementById('pwd-old').value;
+      const newPwd = document.getElementById('pwd-new').value;
+      const confirmPwd = document.getElementById('pwd-confirm').value;
+      const errorDiv = document.getElementById('pwd-error');
+
+      if (newPwd !== confirmPwd) {
+        errorDiv.textContent = t('pwd.error.match');
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        await ReportAPI.changePassword(oldPwd, newPwd);
+        alert(t('pwd.success'));
+        closeChangePwdModal();
+      } catch (err) {
+        errorDiv.textContent = err.message || '修改失败';
+        errorDiv.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
