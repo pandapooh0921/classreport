@@ -1,5 +1,5 @@
 // Retrieve or set default worker URL
-let WORKER_URL = localStorage.getItem('report_worker_url') || 'https://hualianhistory-reports.chewyenhan.workers.dev';
+let WORKER_URL = localStorage.getItem('report_worker_url') || 'https://hualian-reports-worker.hualianj2lclassreport.workers.dev';
 
 function setWorkerUrl(url) {
   // Strip trailing slash
