@@ -131,9 +131,25 @@
                     <span class="label" data-i18n="report.boarding">是否住宿</span>
                     <span id="student-boarding"></span>
                   </div>
+                  <div class="student-info-item" id="student-phone-row">
+                    <span class="label" data-i18n="report.phone">学生手机</span>
+                    <span id="student-phone" style="font-weight: 600;"></span>
+                  </div>
+                  <div class="student-info-item" id="student-father-row">
+                    <span class="label" data-i18n="report.father_phone">父&#8203;亲电话</span>
+                    <span id="student-father-phone" style="font-weight: 600;"></span>
+                  </div>
+                  <div class="student-info-item" id="student-mother-row">
+                    <span class="label" data-i18n="report.mother_phone">母&#8203;亲电话</span>
+                    <span id="student-mother-phone" style="font-weight: 600;"></span>
+                  </div>
                   <div class="student-info-item" style="grid-column: span 2;">
                     <span class="label" data-i18n="report.siblings">在校兄弟姐妹/亲戚</span>
                     <span id="student-siblings" style="font-size: 0.85rem; font-weight: 600; color: #2563eb;"></span>
+                  </div>
+                  <div class="student-info-item" id="student-address-row" style="grid-column: span 2;">
+                    <span class="label" data-i18n="report.address">地址</span>
+                    <span id="student-address" style="font-size: 0.8rem; color: #475569; word-break: break-all;"></span>
                   </div>
                 </div>
               </div>
@@ -201,6 +217,7 @@
   <!-- JS Modules -->
   <script src="js/auth.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
   <script src="js/report-api.js"></script>
   <script>
     let rawSubjectsData = [];
@@ -461,37 +478,105 @@
       container.style.visibility = 'visible';
 
       const student = rawSubjectsData[currentSubjectIndex].students[selectedStudentIndex];
-      
-      // Avatar initials or load from directory
+      const studentData = student._raw || student; // _raw has full class-config data if available
+
+      // Photo: try loading actual photo, fall back to initials
       const avatar = document.getElementById('student-avatar');
-      avatar.textContent = student.name.substring(0, 1);
-      // Optional: if student photo URL is verified to load, we can style it
+      const photoUrl = studentData.photo || ('photos/' + student.student_number + '.jpg');
+      avatar.innerHTML = '';
       avatar.style.background = getAvatarColor(student.student_number);
 
-      document.getElementById('student-name').textContent = student.name;
-      document.getElementById('student-name-en').textContent = student.name_en;
-      document.getElementById('student-number').textContent = student.student_number;
-      
-      document.getElementById('student-gender').textContent = student.gender === 'M' ? t('report.gender.m') : t('report.gender.f');
-      document.getElementById('student-boarding').textContent = student.is_boarding === 1 ? t('report.boarding.yes') : t('report.boarding.no');
-      
+      const img = document.createElement('img');
+      img.src = photoUrl;
+      img.alt = student.name || studentData.nameZh || '';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = '50%';
+      img.onerror = function() {
+        // Fallback to initials if photo not found
+        avatar.removeChild(img);
+        avatar.textContent = (student.name || studentData.nameZh || '').substring(0, 1);
+        avatar.style.display = 'flex';
+        avatar.style.alignItems = 'center';
+        avatar.style.justifyContent = 'center';
+        avatar.style.color = '#fff';
+        avatar.style.fontWeight = '700';
+        avatar.style.fontSize = '1.75rem';
+      };
+      img.onload = function() {
+        avatar.style.display = 'block';
+      };
+      avatar.appendChild(img);
+
+      document.getElementById('student-name').textContent = student.name || studentData.nameZh || '';
+      document.getElementById('student-name-en').textContent = student.name_en || studentData.nameEn || '';
+      document.getElementById('student-number').textContent = student.student_number || studentData.studentId || '';
+
+      document.getElementById('student-gender').textContent = (student.gender === 'M' || studentData.gender === 'M') ? t('report.gender.m') : t('report.gender.f');
+
+      const isBoarding = student.is_boarding === 1 || studentData.hostel === true;
+      document.getElementById('student-boarding').textContent = isBoarding ? t('report.boarding.yes') : t('report.boarding.no');
+
+      // Siblings
       const siblingEl = document.getElementById('student-siblings');
-      if (student.siblings) {
-        siblingEl.textContent = student.siblings;
+      const siblings = student.siblings || studentData.siblings || '';
+      if (siblings) {
+        siblingEl.textContent = siblings;
         siblingEl.parentElement.style.display = 'block';
       } else {
         siblingEl.parentElement.style.display = 'none';
       }
 
+      // ============ PRIVACY: 科任老师只能看班级、姓名、学号、性别 ============
+      const user = getUser();
+      const isFormTeacher = user && user.role === 'form_teacher';
+
+      // Boarding — only form teacher
+      const boardingItem = document.getElementById('student-boarding').parentElement;
+      if (boardingItem) boardingItem.style.display = isFormTeacher ? '' : 'none';
+
+      // Student phone — only form teacher
+      const phoneRow = document.getElementById('student-phone-row');
+      if (phoneRow) phoneRow.style.display = isFormTeacher ? '' : 'none';
+
+      // Father phone — only form teacher
+      const fatherRow = document.getElementById('student-father-row');
+      if (fatherRow) fatherRow.style.display = isFormTeacher ? '' : 'none';
+
+      // Mother phone — only form teacher
+      const motherRow = document.getElementById('student-mother-row');
+      if (motherRow) motherRow.style.display = isFormTeacher ? '' : 'none';
+
+      // Address — only form teacher
+      const addrRow = document.getElementById('student-address-row');
+      if (addrRow) addrRow.style.display = isFormTeacher ? '' : 'none';
+
+      // Siblings — only form teacher
+      const siblingEl = document.getElementById('student-siblings');
+      if (siblingEl && !isFormTeacher) {
+        siblingEl.parentElement.style.display = 'none';
+      }
+
+      // Fill in values (only used if form teacher)
+      const phoneEl = document.getElementById('student-phone');
+      if (phoneEl) phoneEl.textContent = studentData.studentPhone || '-';
+      const fatherPhoneEl = document.getElementById('student-father-phone');
+      if (fatherPhoneEl) fatherPhoneEl.textContent = studentData.fatherPhone || studentData.parent_phone || '-';
+      const motherPhoneEl = document.getElementById('student-mother-phone');
+      if (motherPhoneEl) motherPhoneEl.textContent = studentData.motherPhone || '-';
+      const addrEl = document.getElementById('student-address');
+      if (addrEl) { addrEl.textContent = studentData.address || '-'; addrEl.title = studentData.address || ''; }
+
       // Load existing comment values
       document.getElementById('feedback-input').value = student.feedback || '';
       document.getElementById('complete-checkbox').checked = student.is_complete === 1;
-      
+
       // Clear status message
       const statusMsg = document.getElementById('save-status-msg');
       statusMsg.className = 'save-status';
       statusMsg.textContent = '';
-      
+
       isUnsaved = false;
     }
 
@@ -611,6 +696,22 @@
         errorDiv.style.display = 'block';
       }
     }
+  </script>
+
+  <!-- Dark Mode Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌓</button>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('report_theme', next);
+    }
+    (function() {
+      const saved = localStorage.getItem('report_theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
   </script>
 </body>
 </html>
