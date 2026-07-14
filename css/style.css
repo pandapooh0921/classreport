@@ -358,7 +358,158 @@ header.app-header nav {
   }
 }
 
-/* Print Styles */
+/* ============================================================
+   MATRIX CELL STYLES (Green/Red Grid — inspired by J3K system)
+   ============================================================ */
+.matrix-cell-done {
+  background: #dcfce7 !important;
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+.matrix-cell-done:hover {
+  background: #bbf7d0 !important;
+  transform: scale(1.1);
+}
+
+.matrix-cell-pending {
+  background: #fef9c3 !important;
+  color: #ca8a04;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+.matrix-cell-pending:hover {
+  background: #fef08a !important;
+  transform: scale(1.1);
+}
+
+.matrix-cell-empty {
+  background: #fef2f2 !important;
+  color: #dc2626;
+  font-weight: 300;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.matrix-cell-empty:hover {
+  background: #fecaca !important;
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   DARK MODE SUPPORT
+   ============================================================ */
+[data-theme="dark"] {
+  --pico-primary: #60a5fa;
+  --pico-primary-background: #3b82f6;
+  --pico-primary-hover: #93bbfd;
+}
+
+[data-theme="dark"] body {
+  background: #0f172a;
+}
+
+[data-theme="dark"] article.premium-card {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .student-profile-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .student-list-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .student-list-item:hover,
+[data-theme="dark"] .student-list-item.selected {
+  background: #1e3a5f;
+}
+
+[data-theme="dark"] .matrix-cell-done {
+  background: #14532d !important;
+  color: #86efac;
+}
+[data-theme="dark"] .matrix-cell-done:hover {
+  background: #166534 !important;
+}
+
+[data-theme="dark"] .matrix-cell-pending {
+  background: #422006 !important;
+  color: #fde047;
+}
+
+[data-theme="dark"] .matrix-cell-empty {
+  background: #450a0a !important;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .app-header {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .matrix-table th {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .parent-info-table {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .status-badge.none {
+  background-color: #334155;
+  color: #94a3b8;
+}
+
+/* Dark mode toggle switch */
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--pico-primary);
+  color: white;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.theme-toggle:hover {
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   PHOTO AVATAR FIXES
+   ============================================================ */
+.student-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.small-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
 @media print {
   body {
     background: white !important;
