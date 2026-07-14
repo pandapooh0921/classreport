@@ -73,6 +73,9 @@ const ReportAPI = {
     this._offlineMode = true;
     this._offlineChecked = true;
     console.log('📦 Logged in OFFLINE as:', teacher.name);
+    // Stay in offline mode for the entire session
+    this._offlineMode = true;
+    this._offlineChecked = true;
     return { token: fakeToken, teacher: user, offline: true };
   },
 
