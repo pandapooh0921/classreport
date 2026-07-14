@@ -143,7 +143,7 @@
             <h4 data-i18n="ft.tab.links" style="margin:0; font-weight: 800;">家长查看链接生成</h4>
             <p data-i18n="ft.links.desc" style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">班主任在此生成唯一的家长查看链接。每个链接均包含一个独立加密的安全校验码。</p>
           </div>
-          <button class="secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="copyAllLinks()" data-i18n="ft.links.copy_all">
+          <button class="secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="copyAllLinksLocal()" data-i18n="ft.links.copy_all">
             <i class="fa-solid fa-copy"></i> 复制全部链接
           </button>
         </header>
@@ -500,10 +500,10 @@
         let subDisp = sub.display_name;
         if (getLang() === 'en') subDisp = sub.display_name_en;
         else if (getLang() === 'ms') subDisp = sub.display_name_ms;
-        th.innerHTML = `<span title="${subDisp}">${sub.emoji || ''}</span>`;
-        th.style.width = '42px';
+        th.innerHTML = `${sub.emoji || ''} <small>${subDisp}</small>`;
         th.style.textAlign = 'center';
-        th.style.fontSize = '1.1rem';
+        th.style.fontSize = '0.8rem';
+        th.style.whiteSpace = 'nowrap';
         headerRow.appendChild(th);
       });
 
@@ -649,55 +649,108 @@
     // --- TAB 3: RENDER PARENT VIEW LINKS ---
     async function renderLinksTab() {
       const container = document.getElementById('links-container');
-      
-      try {
-        const data = await ReportAPI.getFTGenerateLinks();
-        const links = data.links || [];
 
-        if (links.length === 0) {
-          container.innerHTML = '<p style="text-align:center; padding: 2rem;">没有活跃学生生成链接。</p>';
-          return;
-        }
+      // Generate links locally (offline-first)
+      const cfg = await LocalData.loadConfig();
+      const year = cfg.currentAcademicYear || '2026';
+      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
+      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
 
-        let html = `
-          <table class="striped" style="font-size: 0.85rem;">
-            <thead>
-              <tr>
-                <th data-i18n="ft.student.no">${t('ft.student.no')}</th>
-                <th>姓名 (Name)</th>
-                <th>安全访问码 (Code)</th>
-                <th>家长访问链接 (Parent Portal URL)</th>
-                <th style="width: 100px;">操作 (Action)</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        links.forEach(link => {
-          html += `
-            <tr>
-              <td>${link.student_number}</td>
-              <td><strong>${link.name}</strong> <span style="font-size:0.75rem; color:#718096;">(${link.name_en})</span></td>
-              <td><code>${link.code}</code></td>
-              <td><a href="${link.url}" target="_blank" style="font-size: 0.8rem; word-break: break-all;">${link.url}</a></td>
-              <td>
-                <button class="outline" style="font-size:0.75rem; padding:0.2rem 0.5rem; margin-bottom:0;" onclick="copySingleLink('${link.url}', this)">
-                  <i class="fa-solid fa-copy"></i> ${t('ft.links.copy')}
-                </button>
-              </td>
-            </tr>
-          `;
-        });
-
-        html += `
-            </tbody>
-          </table>
-        `;
-        container.innerHTML = html;
-      } catch (err) {
-        container.innerHTML = `<p style="color:#ef4444; text-align:center;">无法生成链接: ${err.message}</p>`;
+      if (activeStudents.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding: 2rem;">没有活跃学生。</p>';
+        return;
       }
+
+      // Generate or retrieve parent codes from localStorage
+      const codes = JSON.parse(localStorage.getItem('parent_codes_' + year) || '{}');
+      activeStudents.forEach(st => {
+        if (!codes[st.student_number]) {
+          codes[st.student_number] = generateParentCode();
+        }
+      });
+      localStorage.setItem('parent_codes_' + year, JSON.stringify(codes));
+
+      let html = `
+        <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+          <button onclick="copyAllLinksLocal()" class="secondary" style="font-size:0.85rem;">
+            <i class="fa-solid fa-copy"></i> ${t('ft.links.copy_all') || '复制全部链接'}
+          </button>
+          <button onclick="exportLinksCSVLocal()" class="outline" style="font-size:0.85rem; color:#10b981; border-color:#10b981;">
+            <i class="fa-solid fa-file-csv"></i> 导出 CSV
+          </button>
+        </div>
+        <table class="striped" style="font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>姓名 (Name)</th>
+              <th>访问码 (Code)</th>
+              <th>家长访问链接</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      activeStudents.forEach((st, idx) => {
+        const code = codes[st.student_number];
+        const url = baseUrl + '?code=' + code;
+        html += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><strong>${st.name}</strong> <span style="font-size:0.7rem; color:#718096;">${st.name_en}</span></td>
+            <td><code style="font-weight:700;">${code}</code></td>
+            <td><a href="${url}" target="_blank" style="font-size:0.75rem; word-break:break-all;">${url}</a></td>
+            <td><button class="outline" style="font-size:0.7rem; padding:0.2rem 0.4rem;" onclick="copySingleLink('${url}', this)">📋 复制</button></td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+
+      // Also try backend to sync codes
+      try { await ReportAPI.getFTGenerateLinks(); } catch(e) {}
     }
+
+    function generateParentCode() {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // No I/1/O/0/L
+      let code = '';
+      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    async function copyAllLinksLocal() {
+      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
+      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
+      const codes = JSON.parse(localStorage.getItem('parent_codes_2026') || '{}');
+      const lines = activeStudents.map(st => {
+        const code = codes[st.student_number] || '';
+        return st.name + ': ' + baseUrl + '?code=' + code;
+      });
+      await navigator.clipboard.writeText(lines.join('\n'));
+      alert('已复制 ' + lines.length + ' 条链接！');
+    }
+
+    function exportLinksCSVLocal() {
+      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
+      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
+      const codes = JSON.parse(localStorage.getItem('parent_codes_2026') || '{}');
+      let csv = '﻿序号,姓名,英文名,访问码,链接\n';
+      activeStudents.forEach((st, i) => {
+        const code = codes[st.student_number] || '';
+        csv += `${i+1},"${st.name}","${st.name_en}","${code}","${baseUrl}?code=${code}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'parent_links.csv';
+      a.click();
+    }
+
+    // Make functions global
+    window.copyAllLinksLocal = copyAllLinksLocal;
+    window.exportLinksCSVLocal = exportLinksCSVLocal;
 
     function copySingleLink(url, btn) {
       navigator.clipboard.writeText(url).then(() => {
@@ -1056,117 +1109,123 @@
     let analyticsLoaded = false;
 
     async function loadAnalyticsTab() {
-      if (analyticsLoaded) return; // Don't reload if already loaded
-
       document.getElementById('analytics-loading').style.display = 'block';
       document.getElementById('analytics-content').style.display = 'none';
 
       try {
-        const data = await ReportAPI.getFTAnalytics();
-        renderAnalytics(data);
+        // Build analytics from localStorage + class-config (no backend needed)
+        const cfg = await LocalData.loadConfig();
+        const year = cfg.currentAcademicYear || '2026';
+        const activeStudents = LocalData.getActiveStudents(year);
+        const subjects = cfg.subjects || [];
+
+        // Count reports from localStorage
+        let totalReports = 0, completedReports = 0;
+        const subjectStats = subjects.map(sub => {
+          let completed = 0, inProgress = 0;
+          activeStudents.forEach(st => {
+            const r = LocalData.getReportLocal(year, st.studentId, sub.code);
+            if (r) {
+              totalReports++;
+              if (r.isComplete === 1) completed++;
+              else inProgress++;
+            }
+          });
+          return {
+            code: sub.code, name: sub.name, emoji: sub.emoji,
+            total: activeStudents.length, completed, in_progress: inProgress
+          };
+        });
+
+        // Student completion stats
+        const studentStats = activeStudents.map(st => {
+          let done = 0;
+          subjects.forEach(sub => {
+            const r = LocalData.getReportLocal(year, st.studentId, sub.code);
+            if (r && r.isComplete === 1) done++;
+          });
+          return { name: st.nameZh, student_number: st.studentId, done, total: subjects.length };
+        }).sort((a, b) => b.done - a.done);
+
+        // Activity log from localStorage
+        const activityLog = JSON.parse(localStorage.getItem('report_activity_log') || '[]');
+
+        // Render
+        document.getElementById('stat-total-views').textContent = activityLog.length || '0';
+        document.getElementById('stat-active-students').textContent = activeStudents.length;
+        document.getElementById('stat-rate-limits').textContent = completedReports;
+
+        // Subject bars
+        const barsContainer = document.getElementById('analytics-subject-bars');
+        barsContainer.innerHTML = '';
+        subjectStats.forEach(sub => {
+          const pct = sub.total > 0 ? Math.round((sub.completed / sub.total) * 100) : 0;
+          const el = document.createElement('div');
+          el.style.cssText = 'margin-bottom: 1rem;';
+          el.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+              <span style="font-weight:600; font-size:0.9rem;">${sub.emoji||''} ${sub.name}</span>
+              <span style="font-size:0.82rem; color:#64748b;">${sub.completed}/${sub.total} · ${pct}% 完成</span>
+            </div>
+            <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+              <div style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 999px; transition: width 0.6s ease;"></div>
+            </div>
+          `;
+          barsContainer.appendChild(el);
+        });
+
+        // Per-student completion
+        const tbody = document.getElementById('analytics-per-student-body');
+        tbody.innerHTML = '';
+        studentStats.forEach((s, idx) => {
+          const pct = Math.round((s.done / s.total) * 100);
+          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+          tbody.innerHTML += `
+            <tr>
+              <td style="text-align:center;">${medal}</td>
+              <td style="font-weight:600;">${s.name}</td>
+              <td style="color:#64748b;">${s.student_number}</td>
+              <td style="font-weight:700; color:#4f46e5;">${s.done}/${s.total}</td>
+              <td><div style="height:8px;background:#e2e8f0;border-radius:999px;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:999px;"></div></div></td>
+            </tr>
+          `;
+        });
+
+        // Simple daily activity chart (last 7 days from activity log)
+        const chartContainer = document.getElementById('analytics-daily-chart');
+        const labelsContainer = document.getElementById('analytics-daily-labels');
+        chartContainer.innerHTML = '';
+        labelsContainer.innerHTML = '';
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today); d.setDate(d.getDate() - i);
+          const key = d.toISOString().split('T')[0];
+          const count = activityLog.filter(a => a.startsWith(key)).length;
+          const maxCount = Math.max(...Array.from({length:7}, (_,j) => {
+            const dd = new Date(today); dd.setDate(dd.getDate() - j);
+            return activityLog.filter(a => a.startsWith(dd.toISOString().split('T')[0])).length;
+          }), 1);
+          const h = Math.round((count / maxCount) * 100);
+          chartContainer.innerHTML += `<div style="flex:1;background:linear-gradient(180deg,#7c3aed,#4f46e5);border-radius:6px 6px 0 0;height:${Math.max(h,2)}%;" title="${key}: ${count}"></div>`;
+          labelsContainer.innerHTML += `<div style="flex:1;text-align:center;font-size:0.7rem;color:#94a3b8;">${key.substring(5)}</div>`;
+        }
+
         analyticsLoaded = true;
       } catch (err) {
-        document.getElementById('analytics-loading').innerHTML =
-          `<p style="color: #dc2626;">⚠️ 加载统计数据失败：${err.message}</p>`;
+        document.getElementById('analytics-loading').innerHTML = `<p style="color:#dc2626;">⚠️ ${err.message}</p>`;
+        return;
       }
-    }
-
-    function renderAnalytics(data) {
-      // Stat cards
-      document.getElementById('stat-total-views').textContent = data.total_views.toLocaleString();
-      document.getElementById('stat-active-students').textContent = data.active_student_count;
-      document.getElementById('stat-rate-limits').textContent = data.rate_limit_hits.toLocaleString();
-
-      // Subject completion bars
-      const barsContainer = document.getElementById('analytics-subject-bars');
-      barsContainer.innerHTML = '';
-      (data.subject_stats || []).forEach(sub => {
-        const total = sub.total_students || 0;
-        const completed = sub.completed || 0;
-        const inProgress = sub.in_progress || 0;
-        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-        const subName = (sub.emoji ? sub.emoji + ' ' : '') + sub.display_name;
-
-        const el = document.createElement('div');
-        el.style.cssText = 'margin-bottom: 1rem;';
-        el.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
-            <span style="font-weight:600; font-size:0.9rem;">${escHtml(subName)}</span>
-            <span style="font-size:0.82rem; color:#64748b;">${completed}/${total} · ${pct}% 完成${inProgress > 0 ? ` · ${inProgress} 草稿` : ''}</span>
-          </div>
-          <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-            <div style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 999px; transition: width 0.6s ease;"></div>
-          </div>
-        `;
-        barsContainer.appendChild(el);
-      });
-
-      // Daily views chart (CSS bar chart)
-      const chartContainer = document.getElementById('analytics-daily-chart');
-      const labelsContainer = document.getElementById('analytics-daily-labels');
-      chartContainer.innerHTML = '';
-      labelsContainer.innerHTML = '';
-
-      // Ensure we have 7 days (fill missing with 0)
-      const today = new Date();
-      const sevenDays = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        const found = (data.daily_views || []).find(dv => dv.day === key);
-        sevenDays.push({ day: key, count: found ? found.count : 0 });
-      }
-      const maxCount = Math.max(...sevenDays.map(d => d.count), 1);
-
-      sevenDays.forEach(dv => {
-        const heightPct = Math.round((dv.count / maxCount) * 100);
-        const bar = document.createElement('div');
-        bar.style.cssText = `flex: 1; background: linear-gradient(180deg, #7c3aed, #4f46e5); border-radius: 6px 6px 0 0; height: ${Math.max(heightPct, 2)}%; position: relative; min-height: 4px; cursor: default;`;
-        bar.title = `${dv.day}: ${dv.count} 次访问`;
-        if (dv.count > 0) {
-          const lbl = document.createElement('div');
-          lbl.style.cssText = 'position:absolute; top:-1.4rem; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700; color:#4f46e5; white-space:nowrap;';
-          lbl.textContent = dv.count;
-          bar.appendChild(lbl);
-        }
-        chartContainer.appendChild(bar);
-
-        const dayLbl = document.createElement('div');
-        dayLbl.style.cssText = 'flex: 1; text-align:center; font-size: 0.7rem; color: #94a3b8;';
-        dayLbl.textContent = dv.day.substring(5); // MM-DD
-        labelsContainer.appendChild(dayLbl);
-      });
-
-      // Per-student access table
-      const tbody = document.getElementById('analytics-per-student-body');
-      tbody.innerHTML = '';
-      const maxViews = Math.max(...(data.per_student_views || []).map(s => s.count), 1);
-      (data.per_student_views || []).forEach((s, idx) => {
-        const pct = Math.round((s.count / maxViews) * 100);
-        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="padding:0.5rem; font-size:1.1rem; text-align:center;">${medal}</td>
-          <td style="padding:0.5rem; font-weight:600;">${escHtml(s.name)}</td>
-          <td style="padding:0.5rem; color:#64748b;">${escHtml(String(s.student_number))}</td>
-          <td style="padding:0.5rem; font-weight:700; color:#4f46e5;">${s.count}</td>
-          <td style="padding:0.5rem; min-width:100px;">
-            <div style="height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
-              <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#4f46e5,#7c3aed); border-radius:999px;"></div>
-            </div>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      if ((data.per_student_views || []).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:1.5rem;">暂无访问记录</td></tr>';
-      }
-
       document.getElementById('analytics-loading').style.display = 'none';
       document.getElementById('analytics-content').style.display = 'block';
     }
+
+    // Log activity whenever a report is saved
+    window._logActivity = function(action) {
+      const log = JSON.parse(localStorage.getItem('report_activity_log') || '[]');
+      log.unshift(new Date().toISOString().split('T')[0] + ' ' + action);
+      if (log.length > 500) log.length = 500; // Keep max 500 entries
+      localStorage.setItem('report_activity_log', JSON.stringify(log));
+    };
   </script>
 
   <!-- ============================================================
