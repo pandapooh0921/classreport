@@ -69,6 +69,7 @@
         <li><button onclick="switchTab('reset')" id="tab-btn-reset" class="outline" data-i18n="ft.tab.reset_pwd">重置教师密码</button></li>
         <li><button onclick="switchTab('import')" id="tab-btn-import" class="outline">📄 Word 评语导入</button></li>
         <li><button onclick="switchTab('analytics')" id="tab-btn-analytics" class="outline">📊 访客统计</button></li>
+        <li><button onclick="switchTab('ai')" id="tab-btn-ai" class="outline">🤖 AI 生成评语</button></li>
       </ul>
     </nav>
 
@@ -298,6 +299,56 @@
       </div>
     </section>
 
+    <!-- TAB 7: AI COMMENT GENERATOR -->
+    <section id="tab-content-ai" class="tab-content">
+      <article class="premium-card">
+        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
+          <h4 style="margin:0; font-weight: 800;">🤖 AI 智能生成评语</h4>
+          <p style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">为每个学生自动生成个性化评语，班主任审核后可一键保存到各科</p>
+        </header>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:end; margin-bottom:1.5rem;">
+          <label style="margin:0; min-width:200px;">
+            选择科目
+            <select id="ai-subject-select" onchange="aiRenderPreview()"></select>
+          </label>
+          <label style="margin:0; min-width:150px;">
+            表现分布
+            <select id="ai-level-spread" onchange="aiRenderPreview()">
+              <option value="balanced">均衡分布</option>
+              <option value="high">偏优秀</option>
+              <option value="mid">偏中等</option>
+              <option value="mixed">好坏参半</option>
+            </select>
+          </label>
+          <button onclick="aiGenerateAll()" style="margin:0;">
+            🤖 一键生成全班评语
+          </button>
+          <button class="secondary" onclick="aiApproveAll()" style="margin:0; background:#dcfce7; color:#16a34a; border-color:#bbf7d0;">
+            ✅ 全部批准并保存
+          </button>
+        </div>
+
+        <div style="overflow-x:auto;" id="ai-preview-container">
+          <table class="striped" style="font-size:0.85rem;">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th style="width:100px;">学生</th>
+                <th>AI 生成评语</th>
+                <th style="width:80px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="ai-preview-body">
+              <tr><td colspan="4" style="text-align:center; padding:2rem; color:#94a3b8;">
+                选择科目后点击「🤖 一键生成全班评语」开始
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
   </main>
 
   <!-- VIEW COMMENT MODAL -->
@@ -333,6 +384,7 @@
   <!-- JS Modules -->
   <script src="js/auth.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
   <script src="js/report-api.js"></script>
   <!-- mammoth.js: Parse .docx Word files in-browser (no server upload) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
@@ -434,13 +486,13 @@
     function renderMatrixTab() {
       const headerRow = document.getElementById('matrix-header-row');
       const body = document.getElementById('matrix-body');
-      
+
       if (!classSummaryData.subjects) return;
 
-      // Keep only first 2 columns (学号, 姓名) and append subject columns
+      // Header: 序, 姓名, subjects..., 完成率
       headerRow.innerHTML = `
-        <th data-i18n="ft.student.no">${t('ft.student.no')}</th>
-        <th data-i18n="ft.matrix.student">${t('ft.matrix.student')}</th>
+        <th style="width:40px;">#</th>
+        <th data-i18n="ft.matrix.student" style="text-align:left; min-width:120px;">${t('ft.matrix.student')}</th>
       `;
 
       classSummaryData.subjects.forEach(sub => {
@@ -448,55 +500,96 @@
         let subDisp = sub.display_name;
         if (getLang() === 'en') subDisp = sub.display_name_en;
         else if (getLang() === 'ms') subDisp = sub.display_name_ms;
-        
-        if (sub.emoji) {
-          subDisp = sub.emoji + ' ' + subDisp;
-        }
-        
-        th.textContent = subDisp;
+        th.innerHTML = `<span title="${subDisp}">${sub.emoji || ''}</span>`;
+        th.style.width = '42px';
+        th.style.textAlign = 'center';
+        th.style.fontSize = '1.1rem';
         headerRow.appendChild(th);
       });
 
-      body.innerHTML = '';
-      
-      // We only show ACTIVE students in the matrix summary list
-      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
+      // Add 完成率 column
+      const doneTH = document.createElement('th');
+      doneTH.textContent = '%';
+      doneTH.style.width = '44px';
+      doneTH.style.textAlign = 'center';
+      doneTH.style.fontWeight = '700';
+      headerRow.appendChild(doneTH);
 
-      activeStudents.forEach(st => {
+      body.innerHTML = '';
+
+      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
+      let totalCells = 0, filledCells = 0;
+
+      activeStudents.forEach((st, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${st.student_number}</td>
+          <td style="font-size:0.8rem; color:#94a3b8;">${idx + 1}</td>
           <td class="student-name">
-            <strong>${st.name}</strong><br>
-            <span style="font-size:0.7rem; color:#718096;">${st.name_en}</span>
+            <strong>${st.name}</strong>
+            <span style="font-size:0.7rem; color:#718096; display:block;">${st.name_en}</span>
           </td>
         `;
 
+        let studentDone = 0;
+        const totalSubs = classSummaryData.subjects.length;
+
         classSummaryData.subjects.forEach(sub => {
-          // Find matching report for this student and subject
           const report = classSummaryData.reports.find(r => r.student_id === st.id && r.subject_code === sub.code);
           const td = document.createElement('td');
-          
-          let badgeClass = 'none';
-          let badgeText = t('ft.matrix.status.none');
+          td.style.textAlign = 'center';
+          td.style.cursor = 'pointer';
+          td.title = `${st.name} — ${sub.display_name || sub.code}`;
+          td.onclick = () => openCommentModal(st.id, sub.code);
 
+          totalCells++;
           if (report) {
             const hasText = (report.feedback || '').trim().length > 0;
             if (report.is_complete === 1) {
-              badgeClass = 'done';
-              badgeText = t('ft.matrix.status.done');
+              td.className = 'matrix-cell-done';
+              td.textContent = '✔';
+              studentDone++;
+              filledCells++;
             } else if (hasText) {
-              badgeClass = 'pending';
-              badgeText = t('ft.matrix.status.pending');
+              td.className = 'matrix-cell-pending';
+              td.textContent = '✎';
+              filledCells++;
+            } else {
+              td.className = 'matrix-cell-empty';
+              td.textContent = '—';
             }
+          } else {
+            td.className = 'matrix-cell-empty';
+            td.textContent = '—';
           }
 
-          td.innerHTML = `<span class="status-badge ${badgeClass}" onclick="openCommentModal(${st.id}, '${sub.code}')">${badgeText}</span>`;
           tr.appendChild(td);
         });
 
+        // Completion %
+        const pctTd = document.createElement('td');
+        const pct = Math.round((studentDone / totalSubs) * 100);
+        pctTd.textContent = pct + '%';
+        pctTd.style.textAlign = 'center';
+        pctTd.style.fontWeight = '700';
+        pctTd.style.fontSize = '0.8rem';
+        pctTd.style.color = pct === 100 ? '#16a34a' : pct >= 50 ? '#ca8a04' : '#94a3b8';
+        tr.appendChild(pctTd);
+
         body.appendChild(tr);
       });
+
+      // Summary row
+      const summaryTr = document.createElement('tr');
+      summaryTr.style.borderTop = '2px solid #e2e8f0';
+      summaryTr.style.fontWeight = '700';
+      summaryTr.style.fontSize = '0.8rem';
+      const overallPct = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
+      summaryTr.innerHTML = `
+        <td colspan="2" style="text-align:right; padding-right:1rem;">📊 ${t('ft.matrix.total') || '总计'} ${filledCells}/${totalCells}</td>
+        ${classSummaryData.subjects.map(() => '<td></td>').join('')}
+        <td style="text-align:center; color:${overallPct === 100 ? '#16a34a' : '#ca8a04'};">${overallPct}%</td>
+      `;
+      body.appendChild(summaryTr);
     }
 
     // --- TAB 2: RENDER STUDENTS LIST WITH LEAVING OPTION ---
@@ -1074,6 +1167,231 @@
       document.getElementById('analytics-loading').style.display = 'none';
       document.getElementById('analytics-content').style.display = 'block';
     }
+  </script>
+
+  <!-- ============================================================
+       AI COMMENT GENERATOR
+       ============================================================ -->
+  <script>
+    // --- AI Comment Templates by Subject ---
+    const AI_TEMPLATES = {
+      '001': { // 华文
+        high: ['课堂表现积极，对文学作品有独到见解。', '语文基础扎实，作文表达流畅，富有创意。', '朗读有声有色，阅读理解能力强，字迹工整美观。', '上课认真专注，能独立完成高质量作文，文笔优美。'],
+        mid: ['学习态度认真，语文基础尚可，需多阅读提升写作。', '能按时完成作业，课堂上可更主动发言表达想法。', '对华文学习有兴趣，建议多看课外书丰富词汇量。', '作文结构基本完整，可在内容深度上多加努力。'],
+        low: ['学习态度有待改善，作业偶尔迟交，需加强督促。', '语文基础较弱，建议从朗读和抄写开始打牢基本功。', '课堂上容易分心，希望能端正学习态度，重新出发。', '需在识字和阅读方面多下功夫，家长可配合督促。'],
+        behavior: ['有礼貌，尊敬师长，与同学相处融洽。', '乐于助人，是班上的开心果。', '性格文静，做事细心负责。', '积极参与班级活动，有团队精神。']
+      },
+      '002': { // 国文
+        high: ['Mempunyai asas Bahasa Melayu yang kukuh dan aktif dalam kelas.', 'Bertutur Bahasa Melayu dengan lancar dan yakin. Penulisan karangan tersusun dengan baik.', 'Menunjukkan minat yang tinggi terhadap pembelajaran Bahasa Melayu.'],
+        mid: ['Boleh mengikuti pelajaran dengan baik, perlu lebih berani bertutur dalam Bahasa Melayu.', 'Kerja rumah disiapkan mengikut masa. Galakkan membaca bahan Bahasa Melayu di rumah.', 'Mempunyai potensi yang baik, perlu lebih fokus semasa pembelajaran.'],
+        low: ['Perlu meningkatkan penguasaan kosa kata asas Bahasa Melayu.', 'Kurang memberi tumpuan dalam kelas. Harap dapat memperbaiki sikap pembelajaran.', 'Sering tidak menyiapkan kerja rumah. Ibu bapa diminta bekerjasama untuk membantu.'],
+        behavior: ['Bersopan santun dan menghormati guru.', 'Baik hati dan suka membantu rakan sekelas.', 'Peramah dan mudah mesra dengan semua orang.', 'Aktif dalam aktiviti kokurikulum.']
+      },
+      '003': { // 英文
+        high: ['Demonstrates excellent command of English with active class participation.', 'Speaks confidently and writes with clarity. A pleasure to have in class.', 'Shows strong critical thinking skills during English discussions.'],
+        mid: ['Has a good foundation in English. Encourage more reading at home to expand vocabulary.', 'Completes assignments on time. Would benefit from speaking more English in class.', 'Shows steady improvement. Keep practicing writing to enhance fluency.'],
+        low: ['Needs to build basic English vocabulary. Extra reading practice is strongly recommended.', 'Struggles with grammar fundamentals. Consider additional tutoring support.', 'Lacks confidence in speaking. Small group activities may help build comfort.'],
+        behavior: ['Polite and well-mannered in class.', 'Shows good teamwork during group activities.', 'Always punctual and prepared for lessons.', 'Displays a positive attitude towards learning.']
+      }
+    };
+
+    // Generic templates for subjects without specific ones
+    function _aiGenericTemplates(subCode) {
+      return {
+        high: ['学习态度积极，理解能力强，能独立完成各项任务。', '课堂表现优秀，对该学科有浓厚兴趣，成绩稳定进步。', '主动思考，勇于提问，是该科的佼佼者。', '作业认真，态度端正，具备良好的学习习惯。'],
+        mid: ['学习态度端正，能完成基本要求，仍有提升空间。', '课堂表现稳定，希望继续保持并争取更上一层楼。', '对该科有一定掌握，建议多做练习加强理解。', '认真听讲但较少主动发问，鼓励多与老师互动。'],
+        low: ['学习态度需改进，上课容易分心，望能重新专注。', '该科基础较薄弱，建议课后加强复习和练习。', '作业完成度不高，需家长和老师共同督促。', '有潜力但尚未发挥，希望下学期看到改变。'],
+        behavior: ['尊敬师长，品行端正。', '与同学和睦相处，乐于合作。', '遵守校规，自律性良好。', '积极参与课外活动，全面发展。']
+      };
+    }
+
+    function _aiPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function _aiGenderCN(gender, maleText, femaleText) {
+      return gender === 'M' ? maleText : femaleText;
+    }
+
+    function _aiGenerateOne(student, subjectCode, level) {
+      const tmpl = AI_TEMPLATES[subjectCode] || _aiGenericTemplates(subjectCode);
+      const academic = _aiPick(tmpl[level] || tmpl.mid);
+      const behavior = _aiPick(tmpl.behavior || ['品行端正，尊敬师长。']);
+      const pronoun = _aiGenderCN(student.gender, '他', '她');
+
+      // Combine into a natural comment
+      const openers = [
+        `${student.name}同学`,
+        `${student.name}`
+      ];
+      const opener = level === 'high' ? _aiPick(openers) : _aiPick(openers);
+
+      return `${opener}${academic}${behavior}`;
+    }
+
+    // --- UI Functions ---
+    let aiGeneratedComments = {}; // key: studentId_subjectCode -> comment
+
+    function aiInitSubjectSelect() {
+      if (!classSummaryData || !classSummaryData.subjects) return;
+      const sel = document.getElementById('ai-subject-select');
+      if (!sel || sel.options.length > 1) return;
+      sel.innerHTML = '';
+      classSummaryData.subjects.forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub.code;
+        let name = sub.display_name;
+        if (getLang() === 'en') name = sub.display_name_en;
+        else if (getLang() === 'ms') name = sub.display_name_ms;
+        opt.textContent = (sub.emoji || '') + ' ' + name;
+        sel.appendChild(opt);
+      });
+    }
+
+    function aiGenerateAll() {
+      if (!classSummaryData || !classSummaryData.subjects) return;
+      aiInitSubjectSelect();
+
+      const subCode = document.getElementById('ai-subject-select').value;
+      const spread = document.getElementById('ai-level-spread').value;
+      const activeStudents = (classSummaryData.students || []).filter(s => s.status === 'active');
+
+      if (activeStudents.length === 0) {
+        alert('没有在籍学生可生成评语');
+        return;
+      }
+
+      // Assign levels based on spread
+      const levels = [];
+      activeStudents.forEach((_, i) => {
+        if (spread === 'high') levels.push(i < activeStudents.length * 0.8 ? 'high' : 'mid');
+        else if (spread === 'mid') levels.push(i < activeStudents.length * 0.3 ? 'high' : i < activeStudents.length * 0.9 ? 'mid' : 'low');
+        else if (spread === 'mixed') levels.push(i % 3 === 0 ? 'high' : i % 3 === 1 ? 'mid' : 'low');
+        else levels.push(i < activeStudents.length * 0.25 ? 'high' : i < activeStudents.length * 0.7 ? 'mid' : 'low');
+      });
+
+      // Shuffle levels for natural distribution
+      for (let i = levels.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [levels[i], levels[j]] = [levels[j], levels[i]];
+      }
+
+      // Generate comments
+      activeStudents.forEach((st, i) => {
+        const key = st.student_number + '_' + subCode;
+        aiGeneratedComments[key] = _aiGenerateOne(st, subCode, levels[i]);
+      });
+
+      aiRenderPreview();
+    }
+
+    function aiRenderPreview() {
+      if (!classSummaryData || !classSummaryData.subjects) return;
+      aiInitSubjectSelect();
+
+      const subCode = document.getElementById('ai-subject-select').value;
+      const activeStudents = (classSummaryData.students || []).filter(s => s.status === 'active');
+      const tbody = document.getElementById('ai-preview-body');
+
+      tbody.innerHTML = '';
+      activeStudents.forEach((st, idx) => {
+        const key = st.student_number + '_' + subCode;
+        const comment = aiGeneratedComments[key] || '';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><strong>${st.name}</strong><br><span style="font-size:0.7rem;color:#94a3b8;">${st.name_en}</span></td>
+          <td>
+            <textarea class="ai-comment-area" data-key="${key}"
+              style="width:100%; min-height:60px; font-size:0.85rem; padding:0.5rem; border-radius:6px; border:1px solid #e2e8f0;"
+              oninput="aiOnEdit('${key}', this.value)">${comment}</textarea>
+          </td>
+          <td>
+            <button class="outline" style="font-size:0.7rem; padding:0.25rem 0.5rem; margin:0;"
+              onclick="aiRegenOne('${key}', '${subCode}')">🔄 重生成</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function aiOnEdit(key, value) {
+      aiGeneratedComments[key] = value;
+    }
+
+    function aiRegenOne(key, subCode) {
+      const studentNo = key.split('_')[0];
+      const student = (classSummaryData.students || []).find(s => s.student_number === studentNo);
+      if (!student) return;
+      const levels = ['high', 'mid', 'low'];
+      const level = levels[Math.floor(Math.random() * 3)];
+      aiGeneratedComments[key] = _aiGenerateOne(student, subCode, level);
+      aiRenderPreview();
+    }
+
+    async function aiApproveAll() {
+      if (Object.keys(aiGeneratedComments).length === 0) {
+        alert('请先生成评语再批准！');
+        return;
+      }
+      if (!confirm('确定将所有 AI 生成的评语保存到各科吗？\n保存后科任老师即可看到评语。')) return;
+
+      let saved = 0, failed = 0;
+      const entries = Object.entries(aiGeneratedComments);
+      const subCode = document.getElementById('ai-subject-select').value;
+
+      for (const [key, comment] of entries) {
+        const studentNo = key.split('_')[0];
+        const student = (classSummaryData.students || []).find(s => s.student_number === studentNo);
+        if (!student || !comment.trim()) continue;
+
+        try {
+          await ReportAPI.saveReport(student.id, subCode, comment.trim(), true);
+          saved++;
+        } catch (e) {
+          failed++;
+          console.error('Save failed for', studentNo, e);
+        }
+      }
+
+      alert(`✅ 保存完成！成功: ${saved}，失败: ${failed}`);
+      if (saved > 0) {
+        // Refresh class data
+        try { classSummaryData = await ReportAPI.getFTClassSummary(); } catch(e) {}
+        renderMatrixTab();
+        aiGeneratedComments = {};
+        document.getElementById('ai-preview-body').innerHTML = `
+          <tr><td colspan="4" style="text-align:center; padding:2rem; color:#16a34a;">
+            ✅ 评语已全部保存！请刷新矩阵查看进度。
+          </td></tr>
+        `;
+      }
+    }
+
+    // Initialize AI tab when switching to it
+    const _origSwitchTab = switchTab;
+    switchTab = function(tabName) {
+      _origSwitchTab(tabName);
+      if (tabName === 'ai') {
+        aiInitSubjectSelect();
+        aiRenderPreview();
+      }
+    };
+  </script>
+
+  <!-- Dark Mode Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌓</button>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('report_theme', next);
+    }
+    (function() {
+      const saved = localStorage.getItem('report_theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
   </script>
 </body>
 </html>
