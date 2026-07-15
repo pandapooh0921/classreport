@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -92,7 +92,7 @@ function getU(){try{return JSON.parse(sessionStorage.getItem('report_user')||loc
 function logout(){sessionStorage.clear();localStorage.removeItem('report_token');localStorage.removeItem('report_user');window.location.href='teacher-login.html'}
 
 // Config — fetch with cache-bust for reliability
-function loadCfg(){return new Promise(function(resolve,reject){if(CFG)return resolve(CFG);console.log('[report] Fetching class-config.json...');fetch('class-config.json').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(c){console.log('[report] Config OK:',c.students.length+' students,',c.subjects.length+' subjects');CFG=c;resolve(c)}).catch(function(e){console.error('[report] Config FAILED:',e.message);CFG=null;reject(e)})})}
+function loadCfg(){return new Promise(function(resolve,reject){if(CFG)return resolve(CFG);var url='class-config.json?v=3';console.log('[report] Fetching',url);document.getElementById('rows').innerHTML='<p style="text-align:center;padding:3rem;color:#9ca3af">⏳ 正在加载数据...<br><small>Fetching class-config.json</small></p>';fetch(url).then(function(r){console.log('[report] Fetch status:',r.status);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(c){console.log('[report] Config OK:',c.students.length+' students,',c.subjects.length+' subjects');CFG=c;resolve(c)}).catch(function(e){console.error('[report] Config FAILED:',e.message);CFG=null;reject(e)})})}
 function activeStudents(y){var yr=y||(CFG&&CFG.currentAcademicYear)||'2026';return(CFG&&CFG.students||[]).filter(function(s){return s.academicYear===yr&&s.status==='active'})}
 function loadReport(yr,sid,code){var k='r_'+yr+'_'+sid+'_'+code;try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
 function saveReport(yr,sid,code,fb,ok){var k='r_'+yr+'_'+sid+'_'+code;localStorage.setItem(k,JSON.stringify({feedback:fb,isComplete:ok?1:0,ts:new Date().toISOString()}))}
@@ -107,6 +107,7 @@ if(u.role==='form_teacher')document.getElementById('nd').style.display='';
 
 loadCfg().then(function(cfg){
 try{
+	document.getElementById('rows').innerHTML='<p style="text-align:center;padding:3rem;color:#9ca3af">⏳ 处理数据中...<br><small>Processing...</small></p>';
 console.log('[report] Processing...');
 var yr=cfg.currentAcademicYear||'2026';
 var active=activeStudents(yr);
