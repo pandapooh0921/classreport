@@ -1,1456 +1,325 @@
 <!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="site.title">华联中学 - 学生评语系统</title>
-  
-  <!-- Pico.css v2 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <!-- Google Fonts Outfit & Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- FontAwesome for Premium Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Custom Style overrides -->
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华联中学 - 班主任控制台</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<style>
+:root{--primary:#1a56db}
+body{font-family:'Outfit','Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;background:#f8fafc}
+header.app-header{padding:0.65rem 0;border-bottom:1px solid #e5e7eb;background:#fff;margin-bottom:1.5rem}
+header.app-header nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem}
+.lang-switcher button{padding:3px 12px;border-radius:20px;font-size:0.78rem;background:transparent;border:1px solid #d1d5db;margin:0 2px;cursor:pointer}
+.lang-switcher button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tab-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:2px solid #e5e7eb;padding-bottom:0.5rem}
+.tab-nav button{padding:8px 16px;border-radius:8px 8px 0 0;border:none;background:transparent;font-size:0.85rem;font-weight:600;cursor:pointer;color:#6b7280;transition:all 0.2s}
+.tab-nav button:hover{color:var(--primary);background:#eff6ff}
+.tab-nav button.on{color:var(--primary);background:#fff;border:2px solid #e5e7eb;border-bottom-color:#fff;margin-bottom:-2px}
+.tab-content{display:none}
+.tab-content.active{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.card{background:#fff;border-radius:12px;padding:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-bottom:1.5rem}
+.mcell{text-align:center;padding:6px 4px!important;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s;min-width:36px}
+.mcell:hover{transform:scale(1.15)}
+.mcell.done{background:#dcfce7!important;color:#16a34a}
+.mcell.pend{background:#fef9c3!important;color:#ca8a04}
+.mcell.none{background:#fef2f2!important;color:#dc2626}
+.toggle{position:fixed;bottom:20px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:999}
+@media(max-width:768px){.tab-nav{overflow-x:auto;flex-wrap:nowrap}}
+</style>
 </head>
 <body>
-  
-  <!-- Top Navigation Bar -->
-  <header class="app-header">
-    <div class="container">
-      <nav>
-        <ul>
-          <li>
-            <strong style="font-size: 1.2rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.5rem;">
-              <i class="fa-solid fa-graduation-cap" style="color: var(--pico-primary);"></i>
-              <span data-i18n="parent.school">华联中学</span>
-            </strong>
-          </li>
-        </ul>
-        <ul style="display: flex; align-items: center; gap: 1rem;">
-          <li>
-            <span id="user-display" style="font-size: 0.85rem; font-weight: 600; background: #e0e7ff; color: #3730a3; padding: 0.25rem 0.75rem; border-radius: 12px;"></span>
-          </li>
-          <li>
-            <a href="teacher-report.html" class="outline" style="font-size: 0.85rem; padding: 0.25rem 0.5rem;" data-i18n="nav.report_input">评语录入</a>
-          </li>
-          <li>
-            <a href="#" onclick="ReportAPI.logout()" style="color: #ef4444; font-size: 0.85rem;" data-i18n="nav.logout">退出登录</a>
-          </li>
-          <li>
-            <!-- Lang Switcher inside navbar -->
-            <div class="lang-switcher">
-              <button onclick="setLang('zh')" id="lang-btn-zh">中</button>
-              <button onclick="setLang('en')" id="lang-btn-en">EN</button>
-              <button onclick="setLang('ms')" id="lang-btn-ms">BM</button>
-            </div>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <!-- Main Body Content -->
-  <main class="container">
-    
-    <header style="margin-bottom: 2rem;">
-      <h2 style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.75rem;">
-        <i class="fa-solid fa-chalkboard-user" style="color: var(--pico-primary);"></i>
-        <span data-i18n="ft.title">班主任控制台</span> - <span id="class-title"></span>
-      </h2>
-    </header>
-
-    <nav class="tab-nav" style="margin-bottom: 1.5rem;">
-      <ul style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; list-style: none; margin: 0;">
-        <li><button onclick="switchTab('matrix')" id="tab-btn-matrix" class="outline" data-i18n="ft.tab.matrix">评语总揽矩阵</button></li>
-        <li><button onclick="switchTab('students')" id="tab-btn-students" class="outline" data-i18n="ft.tab.students">学生名单与状态管理</button></li>
-        <li><button onclick="switchTab('links')" id="tab-btn-links" class="outline" data-i18n="ft.tab.links">家长查看链接生成</button></li>
-        <li><button onclick="switchTab('reset')" id="tab-btn-reset" class="outline" data-i18n="ft.tab.reset_pwd">重置教师密码</button></li>
-        <li><button onclick="switchTab('import')" id="tab-btn-import" class="outline">📄 Word 评语导入</button></li>
-        <li><button onclick="switchTab('analytics')" id="tab-btn-analytics" class="outline">📊 访客统计</button></li>
-        <li><button onclick="switchTab('ai')" id="tab-btn-ai" class="outline">🤖 AI 生成评语</button></li>
-      </ul>
-    </nav>
-
-    <!-- TAB 1: MATRIX SUMMARY -->
-    <section id="tab-content-matrix" class="tab-content">
-      <article class="premium-card">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
-          <h4 data-i18n="ft.tab.matrix" style="margin:0; font-weight: 800;">评语总揽矩阵</h4>
-          <p data-i18n="ft.matrix.desc" style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">查看全班学生的各学科评语录入进度（点击状态可直接查看/编辑评语）</p>
-        </header>
-        
-        <div style="overflow-x: auto;">
-          <table class="striped matrix-table">
-            <thead>
-              <tr id="matrix-header-row">
-                <th data-i18n="ft.student.no" style="width: 80px;">学号</th>
-                <th data-i18n="ft.matrix.student" style="text-align: left;">学生姓名</th>
-                <!-- Dynamic subject headers go here -->
-              </tr>
-            </thead>
-            <tbody id="matrix-body">
-              <!-- Dynamic rows go here -->
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <!-- TAB 2: STUDENTS MANAGEMENT -->
-    <section id="tab-content-students" class="tab-content">
-      <article class="premium-card">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h4 data-i18n="ft.tab.students" style="margin:0; font-weight: 800;">学生名单与状态管理</h4>
-            <p data-i18n="ft.student.add_desc" style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">在籍学生将显示在任课老师录入列表中。离校学生（转校/停学）将被隐藏，但保留往期录入的数据。</p>
-          </div>
-          <div>
-            <label for="show-left-checkbox" style="font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.25rem; margin:0;">
-              <input type="checkbox" id="show-left-checkbox" style="margin:0;" onchange="renderStudentsTab()"> 显示离校学生 / Show Left
-            </label>
-          </div>
-        </header>
-
-        <div style="overflow-x: auto;">
-          <table class="striped" style="font-size: 0.85rem;">
-            <thead>
-              <tr>
-                <th data-i18n="ft.student.no">学号</th>
-                <th data-i18n="ft.student.name">中文名字</th>
-                <th data-i18n="ft.student.name_en">英文名字</th>
-                <th data-i18n="ft.student.gender">性别</th>
-                <th data-i18n="ft.student.boarding">住宿</th>
-                <th data-i18n="ft.student.phone">家长电话</th>
-                <th data-i18n="ft.student.status">当前在校状态</th>
-                <th data-i18n="ft.student.action">状态修改</th>
-              </tr>
-            </thead>
-            <tbody id="students-table-body">
-              <!-- Dynamic student rows go here -->
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <!-- TAB 3: PARENT LINKS GENERATION -->
-    <section id="tab-content-links" class="tab-content">
-      <article class="premium-card">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h4 data-i18n="ft.tab.links" style="margin:0; font-weight: 800;">家长查看链接生成</h4>
-            <p data-i18n="ft.links.desc" style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">班主任在此生成唯一的家长查看链接。每个链接均包含一个独立加密的安全校验码。</p>
-          </div>
-          <button class="secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="copyAllLinksLocal()" data-i18n="ft.links.copy_all">
-            <i class="fa-solid fa-copy"></i> 复制全部链接
-          </button>
-        </header>
-
-        <div id="links-container">
-          <!-- Dynamic links table goes here -->
-        </div>
-      </article>
-    </section>
-
-    <!-- TAB 4: RESET PASSWORD -->
-    <section id="tab-content-reset" class="tab-content">
-      <article class="premium-card" style="max-width: 520px; margin: 0 auto;">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
-          <h4 data-i18n="ft.tab.reset_pwd" style="margin:0; font-weight: 800;">重置教师密码</h4>
-          <p data-i18n="ft.reset.desc" style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">如果其他任课老师忘记了密码，班主任可在此为其重置为初始密码（与用户名相同）。</p>
-        </header>
-
-        <form id="reset-pwd-form" onsubmit="submitResetPassword(event)">
-          <label for="reset-teacher-select">
-            <span data-i18n="ft.reset.select">选择教师</span>
-            <select id="reset-teacher-select" required></select>
-          </label>
-
-          <label for="reset-new-pwd">
-            <span data-i18n="ft.reset.new_pwd">新密码</span>
-            <input type="text" id="reset-new-pwd" placeholder="（重置后新密码默认与用户名相同）" disabled>
-          </label>
-
-          <button type="submit" style="margin-top: 1rem;">
-            <i class="fa-solid fa-key"></i> <span data-i18n="ft.reset.submit">执行重置</span>
-          </button>
-        </form>
-      </article>
-    </section>
-
-    <!-- TAB 5: WORD IMPORT -->
-    <section id="tab-content-import" class="tab-content">
-      <article class="premium-card">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
-          <h4 style="margin:0; font-weight: 800;">📄 Word 评语批量导入</h4>
-          <p style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">支持格式：<code>吴淑婷：评语内容...</code> 每行一个学生，解析后预览确认再上传。</p>
-        </header>
-
-        <!-- Step 1: Choose subject -->
-        <div style="margin-bottom: 1.5rem;">
-          <label for="import-subject-select" style="font-weight: 600;">第一步：选择科目</label>
-          <select id="import-subject-select" style="max-width: 320px;">
-            <option value="">-- 请选择科目 --</option>
-          </select>
-        </div>
-
-        <!-- Step 2: Upload .docx or paste text -->
-        <div style="margin-bottom: 1.5rem;">
-          <label style="font-weight: 600;">第二步：上传 .docx Word 文件 <span style="font-weight: 400; color: #718096;">（或直接在下方粘贴文字）</span></label>
-          <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-            <input type="file" id="import-file-input" accept=".docx" style="flex: 1; min-width: 200px;" onchange="handleWordFileUpload(event)">
-            <button class="secondary outline" onclick="document.getElementById('import-file-input').value=''; clearImportPreview()" style="white-space: nowrap;">清除文件</button>
-          </div>
-          <textarea id="import-text-area" rows="8" placeholder="或者直接在这里粘贴文字，格式：\n吴淑婷：评语内容...\n吴紫涵：评语内容..."
-            style="margin-top: 0.75rem; font-size: 0.9rem; font-family: monospace;"
-            oninput="parseImportText(this.value)"></textarea>
-        </div>
-
-        <!-- Step 3: Preview matched results -->
-        <div id="import-preview-section" style="display:none;">
-          <label style="font-weight: 600;">第三步：确认匹配结果</label>
-          <p id="import-preview-summary" style="font-size: 0.85rem; color: #4a5568; margin-bottom: 0.75rem;"></p>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; font-size: 0.88rem;">
-              <thead>
-                <tr style="background: #f1f5f9;">
-                  <th style="padding: 0.6rem;">原文行</th>
-                  <th style="padding: 0.6rem;">匹配学生</th>
-                  <th style="padding: 0.6rem;">学号</th>
-                  <th style="padding: 0.6rem;">评语内容</th>
-                  <th style="padding: 0.6rem;">状态</th>
-                </tr>
-              </thead>
-              <tbody id="import-preview-body"></tbody>
-            </table>
-          </div>
-          <!-- Step 4: Submit -->
-          <div style="margin-top: 1.25rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-            <button id="import-submit-btn" onclick="submitWordImport()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
-              <i class="fa-solid fa-cloud-arrow-up"></i> 确认导入到数据库
-            </button>
-            <span id="import-status-msg" style="font-size: 0.9rem; font-weight: 600;"></span>
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <!-- TAB 6: ANALYTICS -->
-    <section id="tab-content-analytics" class="tab-content">
-      <div id="analytics-loading" style="text-align:center; padding: 3rem;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--pico-primary);"></i></div>
-      <div id="analytics-content" style="display: none;">
-
-        <!-- Stat cards row -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
-          <article class="premium-card" style="text-align: center; padding: 1.5rem;">
-            <div style="font-size: 2.5rem; font-weight: 800; color: #4f46e5;" id="stat-total-views">-</div>
-            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.25rem;">🌐 家长端总访问次数</div>
-          </article>
-          <article class="premium-card" style="text-align: center; padding: 1.5rem;">
-            <div style="font-size: 2.5rem; font-weight: 800; color: #059669;" id="stat-active-students">-</div>
-            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.25rem;">🎓 在读学生人数</div>
-          </article>
-          <article class="premium-card" style="text-align: center; padding: 1.5rem;">
-            <div style="font-size: 2.5rem; font-weight: 800; color: #dc2626;" id="stat-rate-limits">-</div>
-            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.25rem;">🔒 被限流次数</div>
-          </article>
-        </div>
-
-        <!-- Subject completion bars -->
-        <article class="premium-card" style="margin-bottom: 2rem;">
-          <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
-            <h4 style="margin: 0; font-weight: 800;">📋 各科目评语完成率</h4>
-          </header>
-          <div id="analytics-subject-bars"></div>
-        </article>
-
-        <!-- Daily views chart -->
-        <article class="premium-card" style="margin-bottom: 2rem;">
-          <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
-            <h4 style="margin: 0; font-weight: 800;">📅 最近 7 天家长访问趋势</h4>
-          </header>
-          <div id="analytics-daily-chart" style="display: flex; align-items: flex-end; gap: 0.75rem; height: 140px; padding: 0 0.5rem;"></div>
-          <div id="analytics-daily-labels" style="display: flex; gap: 0.75rem; padding: 0 0.5rem; margin-top: 0.25rem;"></div>
-        </article>
-
-        <!-- Per-student top views -->
-        <article class="premium-card">
-          <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
-            <h4 style="margin: 0; font-weight: 800;">🏆 家长链接访问排行（前 20）</h4>
-          </header>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; font-size: 0.88rem;">
-              <thead>
-                <tr style="background: #f1f5f9;">
-                  <th style="padding: 0.6rem;">排名</th>
-                  <th style="padding: 0.6rem;">学生姓名</th>
-                  <th style="padding: 0.6rem;">学号</th>
-                  <th style="padding: 0.6rem;">访问次数</th>
-                  <th style="padding: 0.6rem;">热度</th>
-                </tr>
-              </thead>
-              <tbody id="analytics-per-student-body"></tbody>
-            </table>
-          </div>
-        </article>
-
-      </div>
-    </section>
-
-    <!-- TAB 7: AI COMMENT GENERATOR -->
-    <section id="tab-content-ai" class="tab-content">
-      <article class="premium-card">
-        <header style="padding: 0 0 1rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem;">
-          <h4 style="margin:0; font-weight: 800;">🤖 AI 智能生成评语</h4>
-          <p style="font-size: 0.85rem; color:#718096; margin:0.25rem 0 0 0;">为每个学生自动生成个性化评语，班主任审核后可一键保存到各科</p>
-        </header>
-
-        <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:end; margin-bottom:1.5rem;">
-          <label style="margin:0; min-width:200px;">
-            选择科目
-            <select id="ai-subject-select" onchange="aiRenderPreview()"></select>
-          </label>
-          <label style="margin:0; min-width:150px;">
-            表现分布
-            <select id="ai-level-spread" onchange="aiRenderPreview()">
-              <option value="balanced">均衡分布</option>
-              <option value="high">偏优秀</option>
-              <option value="mid">偏中等</option>
-              <option value="mixed">好坏参半</option>
-            </select>
-          </label>
-          <button onclick="aiGenerateAll()" style="margin:0;">
-            🤖 一键生成全班评语
-          </button>
-          <button class="secondary" onclick="aiApproveAll()" style="margin:0; background:#dcfce7; color:#16a34a; border-color:#bbf7d0;">
-            ✅ 全部批准并保存
-          </button>
-        </div>
-
-        <div style="overflow-x:auto;" id="ai-preview-container">
-          <table class="striped" style="font-size:0.85rem;">
-            <thead>
-              <tr>
-                <th style="width:40px;">#</th>
-                <th style="width:100px;">学生</th>
-                <th>AI 生成评语</th>
-                <th style="width:80px;">操作</th>
-              </tr>
-            </thead>
-            <tbody id="ai-preview-body">
-              <tr><td colspan="4" style="text-align:center; padding:2rem; color:#94a3b8;">
-                选择科目后点击「🤖 一键生成全班评语」开始
-              </td></tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-  </main>
-
-  <!-- VIEW COMMENT MODAL -->
-  <dialog id="view-comment-modal">
-    <article style="width: 100%; max-width: 600px;">
-      <header style="display:flex; justify-content:space-between; align-items:center;">
-        <h4 style="margin:0; font-weight:800;">
-          <span id="modal-student-name"></span> - <span id="modal-subject-name"></span>
-        </h4>
-        <a href="#close" aria-label="Close" class="close" onclick="closeCommentModal()" style="margin:0;"></a>
-      </header>
-      
-      <div style="padding: 1rem 0;">
-        <p style="font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;" data-i18n="report.feedback">任课老师评语</p>
-        <textarea id="modal-comment-text" rows="6" placeholder="（暂未填写评语）" oninput="modalMarkUnsaved()"></textarea>
-        
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:1rem;">
-          <label for="modal-complete-checkbox" style="margin-bottom:0; display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" id="modal-complete-checkbox" style="margin-bottom:0;" onchange="modalMarkUnsaved()">
-            <span data-i18n="report.status.complete" style="font-weight:600;">已完成</span>
-          </label>
-          <span id="modal-save-status" class="save-status"></span>
-        </div>
-      </div>
-      
-      <footer style="display:flex; justify-content:flex-end; gap:0.5rem; padding-bottom:0;">
-        <button class="secondary" onclick="closeCommentModal()" data-i18n="pwd.cancel">取消</button>
-        <button id="modal-save-btn" onclick="saveModalComment()"><i class="fa-solid fa-floppy-disk"></i> 保存修改</button>
-      </footer>
-    </article>
-  </dialog>
-
-  <!-- JS Modules -->
-  <script src="js/auth.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/report-api.js"></script>
-  <!-- mammoth.js: Parse .docx Word files in-browser (no server upload) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-  <script>
-    let classSummaryData = {};
-    let activeTab = 'matrix';
-    
-    // View Modal Tracking State
-    let activeModalStudentId = null;
-    let activeModalSubjectCode = null;
-    let isModalUnsaved = false;
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Set active language button
-      const activeLang = getLang();
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + activeLang);
-      if (activeBtn) activeBtn.classList.add('active');
-
-      const user = getUser();
-      if (user) {
-        let nameText = user.display_name;
-        if (getLang() === 'en') nameText = user.display_name_en;
-        else if (getLang() === 'ms') nameText = user.display_name_ms;
-        document.getElementById('user-display').textContent = nameText;
-      }
-
-      await loadClassData();
-      switchTab('matrix');
-    });
-
-    document.addEventListener('langChanged', (e) => {
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + e.detail.lang);
-      if (activeBtn) activeBtn.classList.add('active');
-      
-      const user = getUser();
-      if (user) {
-        let nameText = user.display_name;
-        if (e.detail.lang === 'en') nameText = user.display_name_en;
-        else if (e.detail.lang === 'ms') nameText = user.display_name_ms;
-        document.getElementById('user-display').textContent = nameText;
-      }
-
-      updateUIElements();
-    });
-
-    // Fetch matrix data from worker D1
-    async function loadClassData() {
-      try {
-        const data = await ReportAPI.getFTClassSummary();
-        classSummaryData = data;
-        
-        let classTitleText = data.className;
-        if (getLang() === 'en') classTitleText = data.classNameEn;
-        else if (getLang() === 'ms') classTitleText = data.classNameMs;
-        document.getElementById('class-title').textContent = classTitleText;
-        
-        updateUIElements();
-      } catch (err) {
-        alert('无法加载班级数据: ' + err.message);
-      }
-    }
-
-    function updateUIElements() {
-      if (!classSummaryData.students) return;
-      
-      let classTitleText = classSummaryData.className;
-      if (getLang() === 'en') classTitleText = classSummaryData.classNameEn;
-      else if (getLang() === 'ms') classTitleText = classSummaryData.classNameMs;
-      document.getElementById('class-title').textContent = classTitleText;
-      
-      renderMatrixTab();
-      renderStudentsTab();
-      renderLinksTab();
-      populateTeachersResetDropdown();
-      initImportTab();
-    }
-
-    function switchTab(tabName) {
-      activeTab = tabName;
-      document.querySelectorAll('.tab-nav button').forEach(b => {
-        if (b.id === 'tab-btn-' + tabName) b.classList.remove('outline');
-        else b.classList.add('outline');
-      });
-
-      document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.remove('active');
-      });
-      document.getElementById('tab-content-' + tabName).classList.add('active');
-
-      // Lazy-load analytics when switching to that tab
-      if (tabName === 'analytics') {
-        loadAnalyticsTab();
-      }
-    }
-
-    // --- TAB 1: RENDER MATRIX TABLE ---
-    function renderMatrixTab() {
-      const headerRow = document.getElementById('matrix-header-row');
-      const body = document.getElementById('matrix-body');
-
-      if (!classSummaryData.subjects) return;
-
-      // Header: 序, 姓名, subjects..., 完成率
-      headerRow.innerHTML = `
-        <th style="width:40px;">#</th>
-        <th data-i18n="ft.matrix.student" style="text-align:left; min-width:120px;">${t('ft.matrix.student')}</th>
-      `;
-
-      classSummaryData.subjects.forEach(sub => {
-        const th = document.createElement('th');
-        let subDisp = sub.display_name;
-        if (getLang() === 'en') subDisp = sub.display_name_en;
-        else if (getLang() === 'ms') subDisp = sub.display_name_ms;
-        th.innerHTML = `${sub.emoji || ''} <small>${subDisp}</small>`;
-        th.style.textAlign = 'center';
-        th.style.fontSize = '0.8rem';
-        th.style.whiteSpace = 'nowrap';
-        headerRow.appendChild(th);
-      });
-
-      // Add 完成率 column
-      const doneTH = document.createElement('th');
-      doneTH.textContent = '%';
-      doneTH.style.width = '44px';
-      doneTH.style.textAlign = 'center';
-      doneTH.style.fontWeight = '700';
-      headerRow.appendChild(doneTH);
-
-      body.innerHTML = '';
-
-      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
-      let totalCells = 0, filledCells = 0;
-
-      activeStudents.forEach((st, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-size:0.8rem; color:#94a3b8;">${idx + 1}</td>
-          <td class="student-name">
-            <strong>${st.name}</strong>
-            <span style="font-size:0.7rem; color:#718096; display:block;">${st.name_en}</span>
-          </td>
-        `;
-
-        let studentDone = 0;
-        const totalSubs = classSummaryData.subjects.length;
-
-        classSummaryData.subjects.forEach(sub => {
-          const report = classSummaryData.reports.find(r => r.student_id === st.id && r.subject_code === sub.code);
-          const td = document.createElement('td');
-          td.style.textAlign = 'center';
-          td.style.cursor = 'pointer';
-          td.title = `${st.name} — ${sub.display_name || sub.code}`;
-          td.onclick = () => openCommentModal(st.id, sub.code);
-
-          totalCells++;
-          if (report) {
-            const hasText = (report.feedback || '').trim().length > 0;
-            if (report.is_complete === 1) {
-              td.className = 'matrix-cell-done';
-              td.textContent = '✔';
-              studentDone++;
-              filledCells++;
-            } else if (hasText) {
-              td.className = 'matrix-cell-pending';
-              td.textContent = '✎';
-              filledCells++;
-            } else {
-              td.className = 'matrix-cell-empty';
-              td.textContent = '—';
-            }
-          } else {
-            td.className = 'matrix-cell-empty';
-            td.textContent = '—';
-          }
-
-          tr.appendChild(td);
-        });
-
-        // Completion %
-        const pctTd = document.createElement('td');
-        const pct = Math.round((studentDone / totalSubs) * 100);
-        pctTd.textContent = pct + '%';
-        pctTd.style.textAlign = 'center';
-        pctTd.style.fontWeight = '700';
-        pctTd.style.fontSize = '0.8rem';
-        pctTd.style.color = pct === 100 ? '#16a34a' : pct >= 50 ? '#ca8a04' : '#94a3b8';
-        tr.appendChild(pctTd);
-
-        body.appendChild(tr);
-      });
-
-      // Summary row
-      const summaryTr = document.createElement('tr');
-      summaryTr.style.borderTop = '2px solid #e2e8f0';
-      summaryTr.style.fontWeight = '700';
-      summaryTr.style.fontSize = '0.8rem';
-      const overallPct = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
-      summaryTr.innerHTML = `
-        <td colspan="2" style="text-align:right; padding-right:1rem;">📊 ${t('ft.matrix.total') || '总计'} ${filledCells}/${totalCells}</td>
-        ${classSummaryData.subjects.map(() => '<td></td>').join('')}
-        <td style="text-align:center; color:${overallPct === 100 ? '#16a34a' : '#ca8a04'};">${overallPct}%</td>
-      `;
-      body.appendChild(summaryTr);
-    }
-
-    // --- TAB 2: RENDER STUDENTS LIST WITH LEAVING OPTION ---
-    function renderStudentsTab() {
-      const body = document.getElementById('students-table-body');
-      const showLeft = document.getElementById('show-left-checkbox').checked;
-      
-      if (!classSummaryData.students) return;
-
-      body.innerHTML = '';
-      
-      // Filter based on checkbox
-      const filtered = classSummaryData.students.filter(s => showLeft || s.status === 'active');
-
-      filtered.forEach(st => {
-        const isLeft = st.status === 'left';
-        const tr = document.createElement('tr');
-        
-        let boardingText = st.is_boarding === 1 ? t('report.boarding.yes') : t('report.boarding.no');
-        let statusText = isLeft ? `<span style="color:#ef4444; font-weight:600;">${t('ft.student.status.left')}</span>` : `<span style="color:#10b981; font-weight:600;">${t('ft.student.status.active')}</span>`;
-
-        // Action button depending on status
-        let actionBtn = '';
-        if (isLeft) {
-          actionBtn = `<button class="secondary" style="font-size:0.75rem; padding: 0.25rem 0.5rem; margin-bottom: 0;" onclick="toggleStudentStatus('${st.student_number}', 'active')">${t('ft.student.action.to_active')}</button>`;
-        } else {
-          actionBtn = `<button class="outline" style="font-size:0.75rem; padding: 0.25rem 0.5rem; margin-bottom: 0; color:#ef4444; border-color:#ef4444;" onclick="toggleStudentStatus('${st.student_number}', 'left')">${t('ft.student.action.to_left')}</button>`;
-        }
-
-        tr.innerHTML = `
-          <td>${st.student_number}</td>
-          <td><strong>${st.name}</strong></td>
-          <td>${st.name_en}</td>
-          <td>${st.gender === 'M' ? t('report.gender.m') : t('report.gender.f')}</td>
-          <td>${boardingText}</td>
-          <td>${st.parent_phone || '-'}</td>
-          <td>${statusText}</td>
-          <td>${actionBtn}</td>
-        `;
-        body.appendChild(tr);
-      });
-    }
-
-    async function toggleStudentStatus(studentNo, nextStatus) {
-      const confirmMsg = nextStatus === 'left' ? t('ft.student.left.confirm') : t('ft.student.active.confirm');
-      if (!confirm(confirmMsg)) return;
-
-      try {
-        await ReportAPI.changeFTStudentStatus(studentNo, nextStatus);
-        alert('学生在校状态更新成功！\nStudent status updated.');
-        await loadClassData(); // reload D1 state
-      } catch (err) {
-        alert('修改状态失败: ' + err.message);
-      }
-    }
-
-    // --- TAB 3: RENDER PARENT VIEW LINKS ---
-    async function renderLinksTab() {
-      const container = document.getElementById('links-container');
-
-      // Generate links locally (offline-first)
-      const cfg = await LocalData.loadConfig();
-      const year = cfg.currentAcademicYear || '2026';
-      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
-      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
-
-      if (activeStudents.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding: 2rem;">没有活跃学生。</p>';
-        return;
-      }
-
-      // Generate or retrieve parent codes from localStorage
-      const codes = JSON.parse(localStorage.getItem('parent_codes_' + year) || '{}');
-      activeStudents.forEach(st => {
-        if (!codes[st.student_number]) {
-          codes[st.student_number] = generateParentCode();
-        }
-      });
-      localStorage.setItem('parent_codes_' + year, JSON.stringify(codes));
-
-      let html = `
-        <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-          <button onclick="copyAllLinksLocal()" class="secondary" style="font-size:0.85rem;">
-            <i class="fa-solid fa-copy"></i> ${t('ft.links.copy_all') || '复制全部链接'}
-          </button>
-          <button onclick="exportLinksCSVLocal()" class="outline" style="font-size:0.85rem; color:#10b981; border-color:#10b981;">
-            <i class="fa-solid fa-file-csv"></i> 导出 CSV
-          </button>
-        </div>
-        <table class="striped" style="font-size: 0.85rem;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>姓名 (Name)</th>
-              <th>访问码 (Code)</th>
-              <th>家长访问链接</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      activeStudents.forEach((st, idx) => {
-        const code = codes[st.student_number];
-        const url = baseUrl + '?code=' + code;
-        html += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td><strong>${st.name}</strong> <span style="font-size:0.7rem; color:#718096;">${st.name_en}</span></td>
-            <td><code style="font-weight:700;">${code}</code></td>
-            <td><a href="${url}" target="_blank" style="font-size:0.75rem; word-break:break-all;">${url}</a></td>
-            <td><button class="outline" style="font-size:0.7rem; padding:0.2rem 0.4rem;" onclick="copySingleLink('${url}', this)">📋 复制</button></td>
-          </tr>
-        `;
-      });
-
-      html += '</tbody></table>';
-      container.innerHTML = html;
-
-      // Also try backend to sync codes
-      try { await ReportAPI.getFTGenerateLinks(); } catch(e) {}
-    }
-
-    function generateParentCode() {
-      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // No I/1/O/0/L
-      let code = '';
-      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-      return code;
-    }
-
-    async function copyAllLinksLocal() {
-      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
-      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
-      const codes = JSON.parse(localStorage.getItem('parent_codes_2026') || '{}');
-      const lines = activeStudents.map(st => {
-        const code = codes[st.student_number] || '';
-        return st.name + ': ' + baseUrl + '?code=' + code;
-      });
-      await navigator.clipboard.writeText(lines.join('\n'));
-      alert('已复制 ' + lines.length + ' 条链接！');
-    }
-
-    function exportLinksCSVLocal() {
-      const activeStudents = classSummaryData.students.filter(s => s.status === 'active');
-      const baseUrl = window.location.origin + window.location.pathname.replace('form-teacher.html', 'parent.html');
-      const codes = JSON.parse(localStorage.getItem('parent_codes_2026') || '{}');
-      let csv = '﻿序号,姓名,英文名,访问码,链接\n';
-      activeStudents.forEach((st, i) => {
-        const code = codes[st.student_number] || '';
-        csv += `${i+1},"${st.name}","${st.name_en}","${code}","${baseUrl}?code=${code}"\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'parent_links.csv';
-      a.click();
-    }
-
-    // Make functions global
-    window.copyAllLinksLocal = copyAllLinksLocal;
-    window.exportLinksCSVLocal = exportLinksCSVLocal;
-
-    function copySingleLink(url, btn) {
-      navigator.clipboard.writeText(url).then(() => {
-        const oldText = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> ${t('ft.links.copied')}`;
-        setTimeout(() => {
-          btn.innerHTML = oldText;
-        }, 1500);
-      });
-    }
-
-    async function copyAllLinks() {
-      try {
-        const data = await ReportAPI.getFTGenerateLinks();
-        const links = data.links || [];
-        
-        let textToCopy = '';
-        links.forEach(l => {
-          textToCopy += `${l.name} (${l.student_number}): ${l.url}\n`;
-        });
-
-        navigator.clipboard.writeText(textToCopy).then(() => {
-          alert('全班家长访问链接已成功复制至剪贴板！');
-        });
-      } catch (err) {
-        alert('复制失败: ' + err.message);
-      }
-    }
-
-    // --- TAB 4: RENDER TEACHER RESET LIST ---
-    function populateTeachersResetDropdown() {
-      const select = document.getElementById('reset-teacher-select');
-      if (!select) return;
-
-      select.innerHTML = '<option value="" disabled selected>选择老师 / Select Teacher...</option>';
-      
-      // Mapped from config or read teachers list if we had an API.
-      // Since we know the list of teachers in initial config:
-      const teachersList = [
-        { username: 'chinese_t', name: '华语老师 (Chinese Teacher)' },
-        { username: 'english_t', name: '英语老师 (English Teacher)' },
-        { username: 'malay_t', name: '国语老师 (Malay Teacher)' },
-        { username: 'math_t', name: '数学老师 (Math Teacher)' },
-        { username: 'science_t', name: '科学老师 (Science Teacher)' },
-        { username: 'history_t', name: '历史老师 (History Teacher)' },
-        { username: 'geography_t', name: '地理老师 (Geography Teacher)' },
-        { username: 'art_t', name: '美术老师 (Art Teacher)' }
-      ];
-
-      teachersList.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.username;
-        opt.textContent = t.name;
-        select.appendChild(opt);
-      });
-    }
-
-    async function submitResetPassword(e) {
-      e.preventDefault();
-      const teacherSelect = document.getElementById('reset-teacher-select');
-      const username = teacherSelect.value;
-      
-      if (!username) {
-        alert('请选择需要重置密码的任课教师！');
-        return;
-      }
-
-      if (!confirm(`确定要重置 ${username} 老师的密码吗？重置后，该老师的登录密码将恢复为默认值（同其用户名）。`)) {
-        return;
-      }
-
-      try {
-        await ReportAPI.resetFTTeacherPassword(username, username); // reset default is equal to username
-        alert(t('ft.reset.success'));
-        teacherSelect.value = '';
-      } catch (err) {
-        alert('重置密码失败: ' + err.message);
-      }
-    }
-
-    // --- READ/WRITE MODAL FOR DIRECT ACCESS FROM SUMMARY MATRIX ---
-    function openCommentModal(studentId, subjectCode) {
-      const student = classSummaryData.students.find(s => s.id === studentId);
-      const subject = classSummaryData.subjects.find(sub => sub.code === subjectCode);
-      const report = classSummaryData.reports.find(r => r.student_id === studentId && r.subject_code === subjectCode);
-
-      if (!student || !subject) return;
-
-      activeModalStudentId = studentId;
-      activeModalSubjectCode = subjectCode;
-
-      let subDisp = subject.display_name;
-      if (getLang() === 'en') subDisp = subject.display_name_en;
-      else if (getLang() === 'ms') subDisp = subject.display_name_ms;
-
-      document.getElementById('modal-student-name').textContent = student.name;
-      document.getElementById('modal-subject-name').textContent = subDisp;
-
-      document.getElementById('modal-comment-text').value = report ? report.feedback : '';
-      document.getElementById('modal-complete-checkbox').checked = report ? report.is_complete === 1 : false;
-
-      // Clear save message
-      const statusMsg = document.getElementById('modal-save-status');
-      statusMsg.className = 'save-status';
-      statusMsg.textContent = '';
-
-      isModalUnsaved = false;
-      document.getElementById('view-comment-modal').showModal();
-    }
-
-    function closeCommentModal() {
-      if (isModalUnsaved) {
-        if (!confirm('您的修改尚未保存，确定要关闭窗口吗？\nUnsaved changes will be lost. Proceed?')) return;
-      }
-      document.getElementById('view-comment-modal').close();
-    }
-
-    function modalMarkUnsaved() {
-      isModalUnsaved = true;
-      const statusMsg = document.getElementById('modal-save-status');
-      statusMsg.className = 'save-status';
-      statusMsg.textContent = '● 未保存 / Unsaved';
-      statusMsg.style.color = '#eab308';
-      statusMsg.classList.add('show');
-    }
-
-    async function saveModalComment() {
-      if (!activeModalStudentId || !activeModalSubjectCode) return;
-
-      const feedbackVal = document.getElementById('modal-comment-text').value;
-      const isCompleteVal = document.getElementById('modal-complete-checkbox').checked;
-      const statusMsg = document.getElementById('modal-save-status');
-      const saveBtn = document.getElementById('modal-save-btn');
-
-      saveBtn.setAttribute('aria-busy', 'true');
-      saveBtn.disabled = true;
-
-      statusMsg.className = 'save-status success show';
-      statusMsg.textContent = t('report.saving');
-
-      try {
-        await ReportAPI.saveReport(activeModalStudentId, activeModalSubjectCode, feedbackVal, isCompleteVal);
-        
-        // Find existing report memory or insert
-        let report = classSummaryData.reports.find(r => r.student_id === activeModalStudentId && r.subject_code === activeModalSubjectCode);
-        if (!report) {
-          report = {
-            student_id: activeModalStudentId,
-            subject_code: activeModalSubjectCode
-          };
-          classSummaryData.reports.push(report);
-        }
-        report.feedback = feedbackVal;
-        report.is_complete = isCompleteVal ? 1 : 0;
-
-        statusMsg.textContent = t('report.saved');
-        isModalUnsaved = false;
-
-        // Immediately update backing matrix UI
-        renderMatrixTab();
-      } catch (err) {
-        statusMsg.className = 'save-status error show';
-        statusMsg.textContent = '❌ 保存失败: ' + err.message;
-      } finally {
-        saveBtn.removeAttribute('aria-busy');
-        saveBtn.disabled = false;
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  TAB 5: WORD IMPORT
-    // ═══════════════════════════════════════════════════════
-
-    // Students lookup list for fuzzy matching (populated on init)
-    let importStudentList = []; // [{id, name, name_en, student_number}]
-    let importParsedRows = [];  // [{rawLine, matchedStudent, feedback}]
-
-    function initImportTab() {
-      // Populate subject dropdown from classSummaryData
-      const sel = document.getElementById('import-subject-select');
-      if (!classSummaryData.subjects) return;
-      classSummaryData.subjects.forEach(sub => {
-        const opt = document.createElement('option');
-        opt.value = sub.code;
-        let label = (sub.emoji ? sub.emoji + ' ' : '') + sub.display_name;
-        opt.textContent = label;
-        sel.appendChild(opt);
-      });
-
-      // Build student list from students data
-      if (classSummaryData.students) {
-        importStudentList = classSummaryData.students.map(s => ({
-          id: s.student_id,
-          name: s.name,
-          name_en: (s.name_en || '').toLowerCase(),
-          student_number: String(s.student_number)
-        }));
-      }
-    }
-
-    // Match student by name (exact first, then partial)
-    function matchStudentByName(rawName) {
-      const trimmed = rawName.trim();
-      // 1. Exact Chinese name match
-      let match = importStudentList.find(s => s.name === trimmed);
-      if (match) return match;
-      // 2. Contains Chinese name
-      match = importStudentList.find(s => trimmed.includes(s.name) || s.name.includes(trimmed));
-      if (match) return match;
-      // 3. English name (case-insensitive)
-      const lc = trimmed.toLowerCase();
-      match = importStudentList.find(s => s.name_en && (s.name_en === lc || s.name_en.includes(lc) || lc.includes(s.name_en)));
-      if (match) return match;
-      // 4. Student number
-      match = importStudentList.find(s => s.student_number === trimmed);
-      return match || null;
-    }
-
-    // Parse text: "姓名：评语" per line (supports Chinese/English colon, tabs)
-    function parseImportText(text) {
-      if (!text || !text.trim()) {
-        clearImportPreview();
-        return;
-      }
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      const rows = [];
-      lines.forEach(line => {
-        // Split on first ：or : (Chinese or English colon)
-        const colonIdx = line.search(/[：:]/);
-        if (colonIdx === -1) return; // skip lines without colon
-
-        const namePart = line.substring(0, colonIdx).trim();
-        const feedbackPart = line.substring(colonIdx + 1).trim();
-
-        const matched = matchStudentByName(namePart);
-        rows.push({
-          rawLine: line,
-          rawName: namePart,
-          feedback: feedbackPart,
-          matchedStudent: matched || null
-        });
-      });
-
-      importParsedRows = rows;
-      renderImportPreview(rows);
-    }
-
-    function renderImportPreview(rows) {
-      const section = document.getElementById('import-preview-section');
-      const body = document.getElementById('import-preview-body');
-      const summary = document.getElementById('import-preview-summary');
-
-      body.innerHTML = '';
-      let matchedCount = 0;
-      let unmatchedCount = 0;
-      let emptyCount = 0;
-
-      rows.forEach((row, idx) => {
-        const tr = document.createElement('tr');
-        const isMatched = !!row.matchedStudent;
-        const isEmpty = !row.feedback.trim();
-        if (isMatched) matchedCount++; else unmatchedCount++;
-        if (isEmpty) emptyCount++;
-
-        tr.style.background = !isMatched ? '#fef2f2' : (isEmpty ? '#fffbeb' : '#f0fdf4');
-        tr.innerHTML = `
-          <td style="padding:0.5rem; font-size:0.85rem; max-width:180px; word-break:break-all;">${escHtml(row.rawLine.substring(0,60))}${row.rawLine.length>60?'...':''}</td>
-          <td style="padding:0.5rem; font-weight:600; color:${isMatched?'#166534':'#991b1b'};">${isMatched ? row.matchedStudent.name : '❌ ' + escHtml(row.rawName)}</td>
-          <td style="padding:0.5rem; color:#475569;">${isMatched ? row.matchedStudent.student_number : '-'}</td>
-          <td style="padding:0.5rem; font-size:0.85rem; max-width:280px; white-space:pre-wrap;">${isEmpty ? '<span style="color:#b45309;">（空）</span>' : escHtml(row.feedback.substring(0,100)) + (row.feedback.length>100?'...':'')}</td>
-          <td style="padding:0.5rem;">
-            ${isMatched ? (isEmpty ? '⚠️ 无评语' : '✅ 匹配') : '❌ 未识别'}
-          </td>
-        `;
-        body.appendChild(tr);
-      });
-
-      summary.innerHTML = `共解析 <strong>${rows.length}</strong> 行 &nbsp;·&nbsp; ✅ 匹配 <strong style="color:#166534">${matchedCount}</strong> &nbsp;·&nbsp; ❌ 未识别 <strong style="color:#991b1b">${unmatchedCount}</strong> &nbsp;·&nbsp; ⚠️ 无评语 <strong style="color:#b45309">${emptyCount}</strong>（仍可导入，将清空该学生评语）`;
-      section.style.display = 'block';
-    }
-
-    function clearImportPreview() {
-      document.getElementById('import-preview-section').style.display = 'none';
-      document.getElementById('import-preview-body').innerHTML = '';
-      importParsedRows = [];
-    }
-
-    // Word file upload via mammoth.js
-    async function handleWordFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      if (typeof mammoth === 'undefined') {
-        alert('mammoth.js 尚未加载，请检查网络连接后刷新页面。');
-        return;
-      }
-      const arrayBuffer = await file.arrayBuffer();
-      try {
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        document.getElementById('import-text-area').value = result.value;
-        parseImportText(result.value);
-      } catch (e) {
-        alert('Word 文件解析失败：' + e.message);
-      }
-    }
-
-    async function submitWordImport() {
-      const subjectCode = document.getElementById('import-subject-select').value;
-      if (!subjectCode) {
-        alert('请先选择科目！');
-        return;
-      }
-      const validRows = importParsedRows.filter(r => r.matchedStudent);
-      if (validRows.length === 0) {
-        alert('没有可导入的匹配行，请检查格式（姓名：评语）。');
-        return;
-      }
-      if (!confirm(`确认导入 ${validRows.length} 条评语到「${subjectCode}」科目？此操作会覆盖该科目已有的评语！`)) return;
-
-      const submitBtn = document.getElementById('import-submit-btn');
-      const statusMsg = document.getElementById('import-status-msg');
-      submitBtn.setAttribute('aria-busy', 'true');
-      submitBtn.disabled = true;
-      statusMsg.textContent = '导入中...';
-      statusMsg.style.color = '#4a5568';
-
-      const comments = validRows.map(r => ({
-        student_id: r.matchedStudent.id,
-        feedback: r.feedback,
-        is_complete: r.feedback.trim().length > 0
-      }));
-
-      try {
-        const res = await ReportAPI.importComments(subjectCode, comments);
-        statusMsg.textContent = `✅ 成功导入 ${res.imported} 条评语！${res.failed > 0 ? ` （${res.failed} 条失败）` : ''}`;
-        statusMsg.style.color = '#166534';
-        // Refresh class summary data
-        classSummaryData = await ReportAPI.getFTClassSummary();
-        renderMatrixTab();
-      } catch (err) {
-        statusMsg.textContent = '❌ 导入失败: ' + err.message;
-        statusMsg.style.color = '#991b1b';
-      } finally {
-        submitBtn.removeAttribute('aria-busy');
-        submitBtn.disabled = false;
-      }
-    }
-
-    function escHtml(str) {
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  TAB 6: ANALYTICS
-    // ═══════════════════════════════════════════════════════
-
-    let analyticsLoaded = false;
-
-    async function loadAnalyticsTab() {
-      document.getElementById('analytics-loading').style.display = 'block';
-      document.getElementById('analytics-content').style.display = 'none';
-
-      try {
-        // Build analytics from localStorage + class-config (no backend needed)
-        const cfg = await LocalData.loadConfig();
-        const year = cfg.currentAcademicYear || '2026';
-        const activeStudents = LocalData.getActiveStudents(year);
-        const subjects = cfg.subjects || [];
-
-        // Count reports from localStorage
-        let totalReports = 0, completedReports = 0;
-        const subjectStats = subjects.map(sub => {
-          let completed = 0, inProgress = 0;
-          activeStudents.forEach(st => {
-            const r = LocalData.getReportLocal(year, st.studentId, sub.code);
-            if (r) {
-              totalReports++;
-              if (r.isComplete === 1) completed++;
-              else inProgress++;
-            }
-          });
-          return {
-            code: sub.code, name: sub.name, emoji: sub.emoji,
-            total: activeStudents.length, completed, in_progress: inProgress
-          };
-        });
-
-        // Student completion stats
-        const studentStats = activeStudents.map(st => {
-          let done = 0;
-          subjects.forEach(sub => {
-            const r = LocalData.getReportLocal(year, st.studentId, sub.code);
-            if (r && r.isComplete === 1) done++;
-          });
-          return { name: st.nameZh, student_number: st.studentId, done, total: subjects.length };
-        }).sort((a, b) => b.done - a.done);
-
-        // Activity log from localStorage
-        const activityLog = JSON.parse(localStorage.getItem('report_activity_log') || '[]');
-
-        // Render
-        document.getElementById('stat-total-views').textContent = activityLog.length || '0';
-        document.getElementById('stat-active-students').textContent = activeStudents.length;
-        document.getElementById('stat-rate-limits').textContent = completedReports;
-
-        // Subject bars
-        const barsContainer = document.getElementById('analytics-subject-bars');
-        barsContainer.innerHTML = '';
-        subjectStats.forEach(sub => {
-          const pct = sub.total > 0 ? Math.round((sub.completed / sub.total) * 100) : 0;
-          const el = document.createElement('div');
-          el.style.cssText = 'margin-bottom: 1rem;';
-          el.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
-              <span style="font-weight:600; font-size:0.9rem;">${sub.emoji||''} ${sub.name}</span>
-              <span style="font-size:0.82rem; color:#64748b;">${sub.completed}/${sub.total} · ${pct}% 完成</span>
-            </div>
-            <div style="height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-              <div style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 999px; transition: width 0.6s ease;"></div>
-            </div>
-          `;
-          barsContainer.appendChild(el);
-        });
-
-        // Per-student completion
-        const tbody = document.getElementById('analytics-per-student-body');
-        tbody.innerHTML = '';
-        studentStats.forEach((s, idx) => {
-          const pct = Math.round((s.done / s.total) * 100);
-          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-          tbody.innerHTML += `
-            <tr>
-              <td style="text-align:center;">${medal}</td>
-              <td style="font-weight:600;">${s.name}</td>
-              <td style="color:#64748b;">${s.student_number}</td>
-              <td style="font-weight:700; color:#4f46e5;">${s.done}/${s.total}</td>
-              <td><div style="height:8px;background:#e2e8f0;border-radius:999px;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:999px;"></div></div></td>
-            </tr>
-          `;
-        });
-
-        // Simple daily activity chart (last 7 days from activity log)
-        const chartContainer = document.getElementById('analytics-daily-chart');
-        const labelsContainer = document.getElementById('analytics-daily-labels');
-        chartContainer.innerHTML = '';
-        labelsContainer.innerHTML = '';
-        const today = new Date();
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(today); d.setDate(d.getDate() - i);
-          const key = d.toISOString().split('T')[0];
-          const count = activityLog.filter(a => a.startsWith(key)).length;
-          const maxCount = Math.max(...Array.from({length:7}, (_,j) => {
-            const dd = new Date(today); dd.setDate(dd.getDate() - j);
-            return activityLog.filter(a => a.startsWith(dd.toISOString().split('T')[0])).length;
-          }), 1);
-          const h = Math.round((count / maxCount) * 100);
-          chartContainer.innerHTML += `<div style="flex:1;background:linear-gradient(180deg,#7c3aed,#4f46e5);border-radius:6px 6px 0 0;height:${Math.max(h,2)}%;" title="${key}: ${count}"></div>`;
-          labelsContainer.innerHTML += `<div style="flex:1;text-align:center;font-size:0.7rem;color:#94a3b8;">${key.substring(5)}</div>`;
-        }
-
-        analyticsLoaded = true;
-      } catch (err) {
-        document.getElementById('analytics-loading').innerHTML = `<p style="color:#dc2626;">⚠️ ${err.message}</p>`;
-        return;
-      }
-      document.getElementById('analytics-loading').style.display = 'none';
-      document.getElementById('analytics-content').style.display = 'block';
-    }
-
-    // Log activity whenever a report is saved
-    window._logActivity = function(action) {
-      const log = JSON.parse(localStorage.getItem('report_activity_log') || '[]');
-      log.unshift(new Date().toISOString().split('T')[0] + ' ' + action);
-      if (log.length > 500) log.length = 500; // Keep max 500 entries
-      localStorage.setItem('report_activity_log', JSON.stringify(log));
-    };
-  </script>
-
-  <!-- ============================================================
-       AI COMMENT GENERATOR
-       ============================================================ -->
-  <script>
-    // --- AI Comment Templates by Subject ---
-    const AI_TEMPLATES = {
-      '001': { // 华文
-        high: ['课堂表现积极，对文学作品有独到见解。', '语文基础扎实，作文表达流畅，富有创意。', '朗读有声有色，阅读理解能力强，字迹工整美观。', '上课认真专注，能独立完成高质量作文，文笔优美。'],
-        mid: ['学习态度认真，语文基础尚可，需多阅读提升写作。', '能按时完成作业，课堂上可更主动发言表达想法。', '对华文学习有兴趣，建议多看课外书丰富词汇量。', '作文结构基本完整，可在内容深度上多加努力。'],
-        low: ['学习态度有待改善，作业偶尔迟交，需加强督促。', '语文基础较弱，建议从朗读和抄写开始打牢基本功。', '课堂上容易分心，希望能端正学习态度，重新出发。', '需在识字和阅读方面多下功夫，家长可配合督促。'],
-        behavior: ['有礼貌，尊敬师长，与同学相处融洽。', '乐于助人，是班上的开心果。', '性格文静，做事细心负责。', '积极参与班级活动，有团队精神。']
-      },
-      '002': { // 国文
-        high: ['Mempunyai asas Bahasa Melayu yang kukuh dan aktif dalam kelas.', 'Bertutur Bahasa Melayu dengan lancar dan yakin. Penulisan karangan tersusun dengan baik.', 'Menunjukkan minat yang tinggi terhadap pembelajaran Bahasa Melayu.'],
-        mid: ['Boleh mengikuti pelajaran dengan baik, perlu lebih berani bertutur dalam Bahasa Melayu.', 'Kerja rumah disiapkan mengikut masa. Galakkan membaca bahan Bahasa Melayu di rumah.', 'Mempunyai potensi yang baik, perlu lebih fokus semasa pembelajaran.'],
-        low: ['Perlu meningkatkan penguasaan kosa kata asas Bahasa Melayu.', 'Kurang memberi tumpuan dalam kelas. Harap dapat memperbaiki sikap pembelajaran.', 'Sering tidak menyiapkan kerja rumah. Ibu bapa diminta bekerjasama untuk membantu.'],
-        behavior: ['Bersopan santun dan menghormati guru.', 'Baik hati dan suka membantu rakan sekelas.', 'Peramah dan mudah mesra dengan semua orang.', 'Aktif dalam aktiviti kokurikulum.']
-      },
-      '003': { // 英文
-        high: ['Demonstrates excellent command of English with active class participation.', 'Speaks confidently and writes with clarity. A pleasure to have in class.', 'Shows strong critical thinking skills during English discussions.'],
-        mid: ['Has a good foundation in English. Encourage more reading at home to expand vocabulary.', 'Completes assignments on time. Would benefit from speaking more English in class.', 'Shows steady improvement. Keep practicing writing to enhance fluency.'],
-        low: ['Needs to build basic English vocabulary. Extra reading practice is strongly recommended.', 'Struggles with grammar fundamentals. Consider additional tutoring support.', 'Lacks confidence in speaking. Small group activities may help build comfort.'],
-        behavior: ['Polite and well-mannered in class.', 'Shows good teamwork during group activities.', 'Always punctual and prepared for lessons.', 'Displays a positive attitude towards learning.']
-      }
-    };
-
-    // Generic templates for subjects without specific ones
-    function _aiGenericTemplates(subCode) {
-      return {
-        high: ['学习态度积极，理解能力强，能独立完成各项任务。', '课堂表现优秀，对该学科有浓厚兴趣，成绩稳定进步。', '主动思考，勇于提问，是该科的佼佼者。', '作业认真，态度端正，具备良好的学习习惯。'],
-        mid: ['学习态度端正，能完成基本要求，仍有提升空间。', '课堂表现稳定，希望继续保持并争取更上一层楼。', '对该科有一定掌握，建议多做练习加强理解。', '认真听讲但较少主动发问，鼓励多与老师互动。'],
-        low: ['学习态度需改进，上课容易分心，望能重新专注。', '该科基础较薄弱，建议课后加强复习和练习。', '作业完成度不高，需家长和老师共同督促。', '有潜力但尚未发挥，希望下学期看到改变。'],
-        behavior: ['尊敬师长，品行端正。', '与同学和睦相处，乐于合作。', '遵守校规，自律性良好。', '积极参与课外活动，全面发展。']
-      };
-    }
-
-    function _aiPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-    function _aiGenderCN(gender, maleText, femaleText) {
-      return gender === 'M' ? maleText : femaleText;
-    }
-
-    function _aiGenerateOne(student, subjectCode, level) {
-      const tmpl = AI_TEMPLATES[subjectCode] || _aiGenericTemplates(subjectCode);
-      const academic = _aiPick(tmpl[level] || tmpl.mid);
-      const behavior = _aiPick(tmpl.behavior || ['品行端正，尊敬师长。']);
-      const pronoun = _aiGenderCN(student.gender, '他', '她');
-
-      // Combine into a natural comment
-      const openers = [
-        `${student.name}同学`,
-        `${student.name}`
-      ];
-      const opener = level === 'high' ? _aiPick(openers) : _aiPick(openers);
-
-      return `${opener}${academic}${behavior}`;
-    }
-
-    // --- UI Functions ---
-    let aiGeneratedComments = {}; // key: studentId_subjectCode -> comment
-
-    function aiInitSubjectSelect() {
-      if (!classSummaryData || !classSummaryData.subjects) return;
-      const sel = document.getElementById('ai-subject-select');
-      if (!sel || sel.options.length > 1) return;
-      sel.innerHTML = '';
-      classSummaryData.subjects.forEach(sub => {
-        const opt = document.createElement('option');
-        opt.value = sub.code;
-        let name = sub.display_name;
-        if (getLang() === 'en') name = sub.display_name_en;
-        else if (getLang() === 'ms') name = sub.display_name_ms;
-        opt.textContent = (sub.emoji || '') + ' ' + name;
-        sel.appendChild(opt);
-      });
-    }
-
-    function aiGenerateAll() {
-      if (!classSummaryData || !classSummaryData.subjects) return;
-      aiInitSubjectSelect();
-
-      const subCode = document.getElementById('ai-subject-select').value;
-      const spread = document.getElementById('ai-level-spread').value;
-      const activeStudents = (classSummaryData.students || []).filter(s => s.status === 'active');
-
-      if (activeStudents.length === 0) {
-        alert('没有在籍学生可生成评语');
-        return;
-      }
-
-      // Assign levels based on spread
-      const levels = [];
-      activeStudents.forEach((_, i) => {
-        if (spread === 'high') levels.push(i < activeStudents.length * 0.8 ? 'high' : 'mid');
-        else if (spread === 'mid') levels.push(i < activeStudents.length * 0.3 ? 'high' : i < activeStudents.length * 0.9 ? 'mid' : 'low');
-        else if (spread === 'mixed') levels.push(i % 3 === 0 ? 'high' : i % 3 === 1 ? 'mid' : 'low');
-        else levels.push(i < activeStudents.length * 0.25 ? 'high' : i < activeStudents.length * 0.7 ? 'mid' : 'low');
-      });
-
-      // Shuffle levels for natural distribution
-      for (let i = levels.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [levels[i], levels[j]] = [levels[j], levels[i]];
-      }
-
-      // Generate comments
-      activeStudents.forEach((st, i) => {
-        const key = st.student_number + '_' + subCode;
-        aiGeneratedComments[key] = _aiGenerateOne(st, subCode, levels[i]);
-      });
-
-      aiRenderPreview();
-    }
-
-    function aiRenderPreview() {
-      if (!classSummaryData || !classSummaryData.subjects) return;
-      aiInitSubjectSelect();
-
-      const subCode = document.getElementById('ai-subject-select').value;
-      const activeStudents = (classSummaryData.students || []).filter(s => s.status === 'active');
-      const tbody = document.getElementById('ai-preview-body');
-
-      tbody.innerHTML = '';
-      activeStudents.forEach((st, idx) => {
-        const key = st.student_number + '_' + subCode;
-        const comment = aiGeneratedComments[key] || '';
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${idx + 1}</td>
-          <td><strong>${st.name}</strong><br><span style="font-size:0.7rem;color:#94a3b8;">${st.name_en}</span></td>
-          <td>
-            <textarea class="ai-comment-area" data-key="${key}"
-              style="width:100%; min-height:60px; font-size:0.85rem; padding:0.5rem; border-radius:6px; border:1px solid #e2e8f0;"
-              oninput="aiOnEdit('${key}', this.value)">${comment}</textarea>
-          </td>
-          <td>
-            <button class="outline" style="font-size:0.7rem; padding:0.25rem 0.5rem; margin:0;"
-              onclick="aiRegenOne('${key}', '${subCode}')">🔄 重生成</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function aiOnEdit(key, value) {
-      aiGeneratedComments[key] = value;
-    }
-
-    function aiRegenOne(key, subCode) {
-      const studentNo = key.split('_')[0];
-      const student = (classSummaryData.students || []).find(s => s.student_number === studentNo);
-      if (!student) return;
-      const levels = ['high', 'mid', 'low'];
-      const level = levels[Math.floor(Math.random() * 3)];
-      aiGeneratedComments[key] = _aiGenerateOne(student, subCode, level);
-      aiRenderPreview();
-    }
-
-    async function aiApproveAll() {
-      if (Object.keys(aiGeneratedComments).length === 0) {
-        alert('请先生成评语再批准！');
-        return;
-      }
-      if (!confirm('确定将所有 AI 生成的评语保存到各科吗？\n保存后科任老师即可看到评语。')) return;
-
-      let saved = 0, failed = 0;
-      const entries = Object.entries(aiGeneratedComments);
-      const subCode = document.getElementById('ai-subject-select').value;
-
-      for (const [key, comment] of entries) {
-        const studentNo = key.split('_')[0];
-        const student = (classSummaryData.students || []).find(s => s.student_number === studentNo);
-        if (!student || !comment.trim()) continue;
-
-        try {
-          await ReportAPI.saveReport(student.id, subCode, comment.trim(), true);
-          saved++;
-        } catch (e) {
-          failed++;
-          console.error('Save failed for', studentNo, e);
-        }
-      }
-
-      alert(`✅ 保存完成！成功: ${saved}，失败: ${failed}`);
-      if (saved > 0) {
-        // Refresh class data
-        try { classSummaryData = await ReportAPI.getFTClassSummary(); } catch(e) {}
-        renderMatrixTab();
-        aiGeneratedComments = {};
-        document.getElementById('ai-preview-body').innerHTML = `
-          <tr><td colspan="4" style="text-align:center; padding:2rem; color:#16a34a;">
-            ✅ 评语已全部保存！请刷新矩阵查看进度。
-          </td></tr>
-        `;
-      }
-    }
-
-    // Initialize AI tab when switching to it
-    const _origSwitchTab = switchTab;
-    switchTab = function(tabName) {
-      _origSwitchTab(tabName);
-      if (tabName === 'ai') {
-        aiInitSubjectSelect();
-        aiRenderPreview();
-      }
-    };
-  </script>
-
-  <!-- Dark Mode Toggle -->
-  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌓</button>
-  <script>
-    function toggleTheme() {
-      const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      localStorage.setItem('report_theme', next);
-    }
-    (function() {
-      const saved = localStorage.getItem('report_theme');
-      if (saved) document.documentElement.setAttribute('data-theme', saved);
-    })();
-  </script>
+<header class="app-header"><div class="container"><nav>
+<ul style="display:flex;align-items:center;gap:0.75rem;list-style:none;margin:0;padding:0">
+<li><strong style="font-size:1rem"><span style="color:var(--primary)">🏫</span> 华联中学 · <span id="cls-name">初二爱</span></strong></li>
+<li><span id="ub" style="font-size:0.75rem;background:#e0e7ff;color:#3730a3;padding:3px 10px;border-radius:12px;font-weight:600"></span></li>
+<li><a href="teacher-report.html" style="font-size:0.78rem;text-decoration:none">📝 评语录入</a></li>
+</ul>
+<ul style="display:flex;align-items:center;gap:0.5rem;list-style:none;margin:0;padding:0">
+<li><a href="#" onclick="logout()" style="color:#ef4444;font-size:0.78rem;text-decoration:none">退出</a></li>
+<li><div class="lang-switcher">
+<button onclick="setLang('zh')" id="lz">中</button>
+<button onclick="setLang('en')" id="le">EN</button>
+<button onclick="setLang('ms')" id="lm">BM</button>
+</div></li>
+</ul>
+</nav></div></header>
+
+<main class="container">
+<h2 style="font-weight:800;margin-bottom:0.5rem">📊 班主任控制台</h2>
+
+<div class="tab-nav" id="tab-nav">
+<button onclick="switchTab('matrix')" id="tn-matrix" class="on">📋 完成矩阵</button>
+<button onclick="switchTab('profiles')" id="tn-profiles">👤 学生档案</button>
+<button onclick="switchTab('links')" id="tn-links">🔗 家长链接</button>
+<button onclick="switchTab('reset')" id="tn-reset">🔑 重置密码</button>
+<button onclick="switchTab('ai')" id="tn-ai">🤖 AI生成评语</button>
+<button onclick="switchTab('stats')" id="tn-stats">📊 统计</button>
+</div>
+
+<!-- MATRIX TAB -->
+<div id="tab-matrix" class="tab-content active">
+<div class="card">
+<div style="overflow-x:auto">
+<table style="font-size:0.82rem;width:100%">
+<thead><tr id="mx-head"><th>#</th><th style="text-align:left">学生</th></tr></thead>
+<tbody id="mx-body"></tbody>
+</table>
+</div>
+<div id="mx-summary" style="margin-top:0.75rem;font-size:0.85rem;font-weight:600;text-align:right"></div>
+</div>
+</div>
+
+<!-- PROFILES TAB -->
+<div id="tab-profiles" class="tab-content">
+<div class="card">
+<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem">
+<input type="search" id="pf-search" placeholder="🔍 搜索..." oninput="renderProfiles()" style="max-width:200px;font-size:0.82rem">
+<label style="display:flex;align-items:center;gap:4px;font-size:0.8rem;cursor:pointer;margin:0"><input type="checkbox" id="pf-show-left" onchange="renderProfiles()"> 显示离校生</label>
+</div>
+<div id="pf-list"></div>
+</div>
+</div>
+
+<!-- LINKS TAB -->
+<div id="tab-links" class="tab-content">
+<div class="card">
+<div style="display:flex;gap:8px;margin-bottom:1rem">
+<button onclick="genLinks()">🔄 生成/刷新链接</button>
+<button onclick="copyAllLinks()" class="secondary">📋 复制全部</button>
+<button onclick="exportLinksCSV()" class="outline" style="color:#10b981;border-color:#10b981">📥 导出CSV</button>
+</div>
+<div style="overflow-x:auto"><table style="font-size:0.82rem;width:100%">
+<thead><tr><th>#</th><th>姓名</th><th>访问码</th><th>链接</th><th>操作</th></tr></thead>
+<tbody id="links-body"><tr><td colspan="5" style="text-align:center;color:#9ca3af">点击「生成/刷新链接」开始</td></tr></tbody>
+</table></div>
+</div>
+</div>
+
+<!-- RESET TAB -->
+<div id="tab-reset" class="tab-content">
+<div class="card" style="max-width:500px">
+<h4>重置教师密码</h4>
+<p style="font-size:0.82rem;color:#6b7280">选择教师，输入新密码。重置后该教师需用新密码登录。</p>
+<select id="rs-teacher" style="margin-bottom:0.5rem"></select>
+<input type="text" id="rs-newpw" placeholder="新密码（留空则重置为默认值）" style="margin-bottom:0.5rem">
+<button onclick="resetPwd()">🔑 执行重置</button>
+<div id="rs-msg" style="margin-top:0.5rem;font-size:0.82rem"></div>
+</div>
+</div>
+
+<!-- AI TAB -->
+<div id="tab-ai" class="tab-content">
+<div class="card">
+<h4>🤖 AI 智能生成评语</h4>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:1rem">
+<select id="ai-subj" style="max-width:200px"></select>
+<select id="ai-spread" style="max-width:150px">
+<option value="balanced">均衡分布</option><option value="high">偏优秀</option><option value="mid">偏中等</option><option value="mixed">好坏参半</option>
+</select>
+<button onclick="aiGen()">🤖 生成全班</button>
+<button onclick="aiApprove()" style="background:#dcfce7;color:#16a34a;border-color:#bbf7d0">✅ 全部批准保存</button>
+</div>
+<div id="ai-table"></div>
+</div>
+</div>
+
+<!-- STATS TAB -->
+<div id="tab-stats" class="tab-content">
+<div class="card">
+<h4>📊 各科完成率</h4>
+<div id="stats-bars"></div>
+<h4 style="margin-top:1.5rem">🏆 学生完成排名</h4>
+<div style="overflow-x:auto"><table style="font-size:0.82rem;width:100%">
+<thead><tr><th>#</th><th>学生</th><th>学号</th><th>完成</th><th>进度</th></tr></thead>
+<tbody id="stats-rank"></tbody>
+</table></div>
+</div>
+</div>
+</main>
+
+<button class="toggle" onclick="toggleTheme()">🌓</button>
+
+<script>
+// ==================== ALL-IN-ONE FORM TEACHER ====================
+var LANG='zh';
+var CFG=null, MATRIX={subjects:[],students:[],reports:[]};
+var aiComments={};
+
+// I18N
+var T={zh:{total:'总计',done:'已完成',pend:'编写中',none:'未开始',genLinks:'🔄 生成/刷新链接',copyAll:'📋 复制全部',exportCSV:'📥 导出CSV',resetPwd:'🔑 执行重置',aiGen:'🤖 生成全班',aiApprove:'✅ 全部批准保存',noStudents:'没有在籍学生。',showLeft:'显示离校生',search:'🔍 搜索...',sid:'学号',name:'姓名',nameEn:'英文名',gender:'性别',hostel:'住宿',status:'状态',phone:'电话',address:'地址',father:'父亲',mother:'母亲',siblings:'兄弟姐妹',left:'离校',active:'在籍',male:'男',female:'女',yes:'是',no:'否',pwdOk:'密码重置成功！',pwdFail:'重置失败',copied:'已复制！',approveAll:'确定保存所有AI评语吗？'},en:{total:'Total',done:'Done',pend:'Writing',none:'None',genLinks:'🔄 Generate Links',copyAll:'📋 Copy All',exportCSV:'📥 Export CSV',resetPwd:'🔑 Reset',aiGen:'🤖 Generate All',aiApprove:'✅ Approve All',noStudents:'No active students.',showLeft:'Show Left',search:'🔍 Search...',sid:'ID',name:'Name',nameEn:'English Name',gender:'Gender',hostel:'Hostel',status:'Status',phone:'Phone',address:'Address',father:'Father',mother:'Mother',siblings:'Siblings',left:'Left',active:'Active',male:'Male',female:'Female',yes:'Yes',no:'No',pwdOk:'Password reset OK!',pwdFail:'Reset failed',copied:'Copied!',approveAll:'Save all AI comments?'},ms:{total:'Jumlah',done:'Selesai',pend:'Proses',none:'Tiada',genLinks:'🔄 Jana Pautan',copyAll:'📋 Salin Semua',exportCSV:'📥 Eksport CSV',resetPwd:'🔑 Set Semula',aiGen:'🤖 Jana Semua',aiApprove:'✅ Lulus Semua',noStudents:'Tiada pelajar aktif.',showLeft:'Tunjuk Keluar',search:'🔍 Cari...',sid:'ID',name:'Nama',nameEn:'Nama Inggeris',gender:'Jantina',hostel:'Asrama',status:'Status',phone:'Telefon',address:'Alamat',father:'Bapa',mother:'Ibu',siblings:'Adik-beradik',left:'Keluar',active:'Aktif',male:'Lelaki',female:'Perempuan',yes:'Ya',no:'Tidak',pwdOk:'Kata laluan diset semula!',pwdFail:'Gagal',copied:'Disalin!',approveAll:'Simpan semua ulasan AI?'}};
+function tx(k){return(T[LANG]&&T[LANG][k])||T.zh[k]||k}
+function setLang(l){LANG=l;localStorage.setItem('report_lang',l);['zh','en','ms'].forEach(function(x){var b=document.getElementById('l'+x[0]);if(b)b.classList.toggle('active',x===l)});document.title='华联中学 - '+(l==='en'?'Dashboard':l==='ms'?'Dashboard':'班主任控制台')}
+(function(){var sl=localStorage.getItem('report_lang');setLang(sl||'zh')})();
+
+// Auth
+function getT(){return sessionStorage.getItem('report_token')||localStorage.getItem('report_token')}
+function getU(){try{return JSON.parse(sessionStorage.getItem('report_user')||localStorage.getItem('report_user')||'null')}catch(e){return null}}
+function logout(){sessionStorage.clear();localStorage.removeItem('report_token');localStorage.removeItem('report_user');window.location.href='teacher-login.html'}
+
+// Config
+function loadCfg(){return new Promise(function(resolve){if(CFG)return resolve(CFG);fetch('class-config.json').then(function(r){return r.json()}).then(function(c){CFG=c;resolve(c)}).catch(function(){CFG={subjects:[],teachers:[],students:[],currentAcademicYear:'2026'};resolve(CFG)})})}
+function activeStudents(y){var yr=y||(CFG&&CFG.currentAcademicYear)||'2026';return(CFG.students||[]).filter(function(s){return s.academicYear===yr&&s.status==='active'})}
+function allStudents(y){var yr=y||(CFG&&CFG.currentAcademicYear)||'2026';return(CFG.students||[]).filter(function(s){return s.academicYear===yr})}
+function loadReport(yr,sid,code){var k='r_'+yr+'_'+sid+'_'+code;try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function saveReport(yr,sid,code,fb,ok){var k='r_'+yr+'_'+sid+'_'+code;localStorage.setItem(k,JSON.stringify({feedback:fb,isComplete:ok?1:0,ts:new Date().toISOString()}))}
+
+// Init
+(function(){
+var u=getU();if(!u||!getT()||u.role!=='form_teacher'){window.location.href='teacher-login.html';return}
+document.getElementById('ub').textContent=u.display_name||u.username;
+
+loadCfg().then(function(cfg){
+var yr=cfg.currentAcademicYear||'2026';
+document.getElementById('cls-name').textContent=(cfg.academicYears&&cfg.academicYears[yr]&&cfg.academicYears[yr].classes?Object.values(cfg.academicYears[yr].classes)[0]:{name:'初二爱'}).name||'初二爱';
+
+// Build MATRIX data
+var active=activeStudents(yr),all=allStudents(yr),subs=cfg.subjects||[];
+MATRIX.subjects=subs.map(function(s){return{code:s.code,name:s.name,emoji:s.emoji||''}});
+MATRIX.students=all.map(function(st){return{sid:st.studentId,sno:st.studentNo,nameZh:st.nameZh,nameEn:st.nameEn,gender:st.gender,hostel:st.hostel,studentPhone:st.studentPhone||'',fatherPhone:st.fatherPhone||'',motherPhone:st.motherPhone||'',address:st.address||'',siblings:st.siblings||'',status:st.status,leftDate:st.leftDate||'',leftReason:st.leftReason||'',photo:st.photo||('photos/'+st.studentId+'.jpg'),raw:st}});
+MATRIX.reports=[];
+all.forEach(function(st){subs.forEach(function(sub){var r=loadReport(yr,st.studentId,sub.code);if(r)MATRIX.reports.push({student_id:parseInt(st.studentId)||0,subject_code:sub.code,feedback:r.feedback,is_complete:r.isComplete})})});
+
+renderMatrix();
+renderProfiles();
+initAISubject();
+initResetTeachers();
+});
+})();
+
+// ====== TAB SWITCH ======
+function switchTab(name){
+['matrix','profiles','links','reset','ai','stats'].forEach(function(t){
+document.getElementById('tab-'+t).classList.toggle('active',t===name);
+var btn=document.getElementById('tn-'+t);if(btn)btn.classList.toggle('on',t===name)
+});
+if(name==='links')renderLinks();
+if(name==='stats')renderStats();
+if(name==='ai')initAISubject();
+if(name==='profiles')renderProfiles();
+}
+
+// ====== MATRIX ======
+function renderMatrix(){
+var head=document.getElementById('mx-head'),body=document.getElementById('mx-body');
+head.innerHTML='<th>#</th><th style="text-align:left">学生</th>';
+MATRIX.subjects.forEach(function(s){head.innerHTML+='<th style="text-align:center;font-size:1.1rem" title="'+s.name+'">'+s.emoji+'</th>'});
+head.innerHTML+='<th>%</th>';
+
+var active=MATRIX.students.filter(function(s){return s.status==='active'});
+var totalCells=0,filledCells=0;
+body.innerHTML='';
+active.forEach(function(st,i){
+var tr='<tr><td style="color:#9ca3af;font-size:0.78rem">'+(i+1)+'</td><td><strong>'+st.nameZh+'</strong><br><span style="font-size:0.7rem;color:#9ca3af">'+st.nameEn+'</span></td>';
+var doneCount=0;
+MATRIX.subjects.forEach(function(sub){
+var r=null;
+for(var j=0;j<MATRIX.reports.length;j++){if(MATRIX.reports[j].student_id===parseInt(st.sid)&&MATRIX.reports[j].subject_code===sub.code){r=MATRIX.reports[j];break}}
+totalCells++;
+var cls='none',sym='—';
+if(r){var hasText=(r.feedback||'').trim().length>0;if(r.is_complete===1){cls='done';sym='✔';doneCount++;filledCells++}else if(hasText){cls='pend';sym='✎';filledCells++}}
+tr+='<td class="mcell '+cls+'" title="'+st.nameZh+' — '+sub.name+'">'+sym+'</td>'
+});
+var pct=Math.round(doneCount/MATRIX.subjects.length*100);
+tr+='<td style="text-align:center;font-weight:700;color:'+(pct===100?'#16a34a':pct>=50?'#ca8a04':'#9ca3af')+'">'+pct+'%</td></tr>';
+body.innerHTML+=tr
+});
+var overall=totalCells>0?Math.round(filledCells/totalCells*100):0;
+document.getElementById('mx-summary').innerHTML='📊 '+tx('total')+': '+filledCells+'/'+totalCells+' 格已填写 ('+overall+'%)'
+}
+
+// ====== STUDENT PROFILES ======
+function renderProfiles(){
+var showLeft=document.getElementById('pf-show-left').checked;
+var q=(document.getElementById('pf-search').value||'').toLowerCase();
+var filtered=MATRIX.students.filter(function(s){if(!showLeft&&s.status==='left')return false;if(!q)return true;return s.nameZh.toLowerCase().indexOf(q)>=0||s.nameEn.toLowerCase().indexOf(q)>=0||s.sid.indexOf(q)>=0});
+var html='';
+filtered.forEach(function(st,i){
+var isLeft=st.status==='left';
+var bg=isLeft?'background:#fef2f2':'';
+html+='<div style="padding:0.75rem;margin-bottom:8px;border-radius:8px;border:1px solid #e5e7eb;'+bg+'">';
+html+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+html+='<div style="width:48px;height:48px;border-radius:50%;overflow:hidden;background:#e5e7eb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:1rem"><img src="'+st.photo+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.parentElement.textContent=\''+st.nameZh.charAt(0)+'\'" alt=""></div>';
+html+='<div style="flex:1;min-width:200px"><strong>'+st.nameZh+'</strong> <span style="color:#9ca3af">'+st.nameEn+'</span>';
+if(isLeft)html+=' <span style="background:#fca5a5;color:#b91c1c;padding:2px 8px;border-radius:10px;font-size:0.7rem">'+tx('left')+' ('+st.leftDate+')</span>';
+html+='<div style="font-size:0.78rem;color:#6b7280;margin-top:4px">'+tx('sid')+': '+st.sid+' | '+tx('gender')+': '+(st.gender==='M'?tx('male'):tx('female'))+' | '+tx('hostel')+': '+(st.hostel?tx('yes'):tx('no'))+'</div>';
+html+='<div style="font-size:0.78rem;color:#6b7280">📱 学生: '+(st.studentPhone||'—')+' | 👨 '+tx('father')+': '+(st.fatherPhone||'—')+' | 👩 '+tx('mother')+': '+(st.motherPhone||'—')+'</div>';
+if(st.siblings)html+='<div style="font-size:0.78rem;color:#6b7280">👥 '+tx('siblings')+': '+st.siblings+'</div>';
+html+='<div style="font-size:0.75rem;color:#9ca3af">📍 '+(st.address||'—')+'</div></div></div></div>'
+});
+if(filtered.length===0)html='<p style="text-align:center;padding:2rem;color:#9ca3af">'+tx('noStudents')+'</p>';
+document.getElementById('pf-list').innerHTML=html
+}
+
+// ====== PARENT LINKS ======
+function genCode(){var ch='ABCDEFGHJKMNPQRSTUVWXYZ23456789',c='';for(var i=0;i<8;i++)c+=ch[Math.floor(Math.random()*ch.length)];return c}
+function getCodes(){try{return JSON.parse(localStorage.getItem('parent_codes_2026'))||{}}catch(e){return{}}}
+function saveCodes(c){localStorage.setItem('parent_codes_2026',JSON.stringify(c))}
+function genLinks(){var codes=getCodes();var active=MATRIX.students.filter(function(s){return s.status==='active'});active.forEach(function(s){if(!codes[s.sid])codes[s.sid]=genCode()});saveCodes(codes);renderLinks()}
+function renderLinks(){
+var codes=getCodes(),active=MATRIX.students.filter(function(s){return s.status==='active'});
+if(active.length===0){document.getElementById('links-body').innerHTML='<tr><td colspan="5" style="text-align:center;color:#9ca3af">'+tx('noStudents')+'</td></tr>';return}
+var base=window.location.origin+window.location.pathname.replace('form-teacher.html','parent.html'),html='';
+active.forEach(function(s,i){var code=codes[s.sid]||genCode(),url=base+'?code='+code;
+html+='<tr><td>'+(i+1)+'</td><td><strong>'+s.nameZh+'</strong> <span style="font-size:0.7rem;color:#9ca3af">'+s.nameEn+'</span></td><td><code style="font-weight:700">'+code+'</code></td><td><a href="'+url+'" target="_blank" style="font-size:0.72rem">'+url+'</a></td><td><button class="outline" style="font-size:0.7rem;padding:2px 8px" onclick="copyLink(\''+url+'\',this)">📋</button></td></tr>'});
+if(!codes[s.sid])codes[s.sid]=code});
+saveCodes(codes);document.getElementById('links-body').innerHTML=html
+}
+function copyLink(url,btn){navigator.clipboard.writeText(url).then(function(){btn.textContent='✓';setTimeout(function(){btn.textContent='📋'},1500)})}
+function copyAllLinks(){var codes=getCodes(),active=MATRIX.students.filter(function(s){return s.status==='active'});var base=window.location.origin+window.location.pathname.replace('form-teacher.html','parent.html');var lines=active.map(function(s){return s.nameZh+': '+base+'?code='+(codes[s.sid]||'')});navigator.clipboard.writeText(lines.join('\n')).then(function(){alert(tx('copied'))})}
+function exportLinksCSV(){var codes=getCodes(),active=MATRIX.students.filter(function(s){return s.status==='active'});var base=window.location.origin+window.location.pathname.replace('form-teacher.html','parent.html');var csv='﻿序号,姓名,英文名,访问码,链接\n';active.forEach(function(s,i){csv+=(i+1)+',"'+s.nameZh+'","'+s.nameEn+'","'+(codes[s.sid]||'')+'","'+base+'?code='+(codes[s.sid]||'')+'"\n'});var b=new Blob([csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='parent_links.csv';a.click()}
+
+// ====== RESET PASSWORD ======
+function initResetTeachers(){
+var sel=document.getElementById('rs-teacher');sel.innerHTML='';
+var teachers=CFG?CFG.teachers||[]:[];
+teachers.forEach(function(t){sel.innerHTML+='<option value="'+t.username+'">'+t.name+' ('+t.username+')</option>'})
+}
+function resetPwd(){
+var un=document.getElementById('rs-teacher').value;
+var pw=document.getElementById('rs-newpw').value||un; // default to username
+// Update class-config.json is read-only. For now, update localStorage password map
+var pwMap=JSON.parse(localStorage.getItem('teacher_pw')||'{}');pwMap[un]=pw;localStorage.setItem('teacher_pw',JSON.stringify(pwMap));
+document.getElementById('rs-msg').innerHTML='<span style="color:#16a34a">✅ '+tx('pwdOk')+' '+un+' → '+pw+'</span>'
+}
+
+// ====== AI GENERATOR ======
+function initAISubject(){var sel=document.getElementById('ai-subj');if(!sel||sel.options.length>1)return;sel.innerHTML='';MATRIX.subjects.forEach(function(s){sel.innerHTML+='<option value="'+s.code+'">'+s.emoji+' '+s.name+'</option>'})}
+var AI_PHRASES={high:['学习态度积极，理解能力强，表现优秀。','课堂认真专注，作业完成质量高，值得表扬。','主动思考，勇于提问，是该科的佼佼者。','基础扎实，进步明显，继续保持。'],mid:['学习态度端正，能完成基本要求，仍有提升空间。','课堂表现稳定，希望多主动参与讨论。','认真听讲，建议多做练习加强理解。','有潜力可挖，鼓励多与老师互动交流。'],low:['学习态度需改进，上课容易分心，希望能重新专注。','基础较薄弱，建议课后加强复习和练习。','作业完成度不高，需家长和老师共同督促。','有进步空间，希望下学期看到改变。'],beh:['尊敬师长，品行端正，与同学相处融洽。','乐于助人，积极参与班级活动。','性格文静，做事细心负责。','遵守校规，自律性良好。']};
+function aiGen(){
+var subjCode=document.getElementById('ai-subj').value,spread=document.getElementById('ai-spread').value;
+var active=MATRIX.students.filter(function(s){return s.status==='active'});
+var levels=[];active.forEach(function(_,i){if(spread==='high')levels.push(i<active.length*0.8?'high':'mid');else if(spread==='mid')levels.push(i<active.length*0.3?'high':i<active.length*0.9?'mid':'low');else if(spread==='mixed')levels.push(i%3===0?'high':i%3===1?'mid':'low');else levels.push(i<active.length*0.25?'high':i<active.length*0.7?'mid':'low')});
+for(var i=levels.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=levels[i];levels[i]=levels[j];levels[j]=t}
+active.forEach(function(st,i){var level=levels[i],acad=AI_PHRASES[level][Math.floor(Math.random()*AI_PHRASES[level].length)],beh=AI_PHRASES.beh[Math.floor(Math.random()*AI_PHRASES.beh.length)],pro=st.gender==='M'?'他':'她';aiComments[st.sid+'_'+subjCode]=st.nameZh+'同学'+acad+pro+beh});
+renderAITable()
+}
+function renderAITable(){
+var subjCode=document.getElementById('ai-subj').value,active=MATRIX.students.filter(function(s){return s.status==='active'});
+var html='<table style="font-size:0.82rem;width:100%"><thead><tr><th>#</th><th>学生</th><th>AI评语</th><th>操作</th></tr></thead><tbody>';
+active.forEach(function(st,i){var key=st.sid+'_'+subjCode,comment=aiComments[key]||'';html+='<tr><td>'+(i+1)+'</td><td><strong>'+st.nameZh+'</strong></td><td><textarea id="aic'+key+'" style="width:100%;min-height:50px;font-size:0.82rem;padding:4px 8px;border-radius:6px;border:1px solid #d1d5db">'+escHtml(comment)+'</textarea></td><td><button class="outline" style="font-size:0.7rem;padding:2px 8px" onclick="aiRegen(\''+st.sid+'\',\''+subjCode+'\')">🔄</button></td></tr>'});
+html+='</tbody></table>';document.getElementById('ai-table').innerHTML=html
+}
+function aiRegen(sid,subjCode){var st=null;for(var i=0;i<MATRIX.students.length;i++){if(MATRIX.students[i].sid===sid){st=MATRIX.students[i];break}}if(!st)return;var levels=['high','mid','low'],level=levels[Math.floor(Math.random()*3)],acad=AI_PHRASES[level][Math.floor(Math.random()*AI_PHRASES[level].length)],beh=AI_PHRASES.beh[Math.floor(Math.random()*AI_PHRASES.beh.length)],pro=st.gender==='M'?'他':'她';aiComments[sid+'_'+subjCode]=st.nameZh+'同学'+acad+pro+beh;renderAITable()}
+function aiApprove(){if(!confirm(tx('approveAll')))return;var subjCode=document.getElementById('ai-subj').value,active=MATRIX.students.filter(function(s){return s.status==='active'});var yr=CFG.currentAcademicYear||'2026';var saved=0;active.forEach(function(st){var key=st.sid+'_'+subjCode,comment=aiComments[key]||'';if(!comment.trim())return;saveReport(yr,st.sid,subjCode,comment.trim(),true);MATRIX.reports.push({student_id:parseInt(st.sid)||0,subject_code:subjCode,feedback:comment.trim(),is_complete:1});saved++});alert('✅ '+saved+' 条评语已保存！');aiComments={};renderAITable();renderMatrix()}
+
+// ====== STATS ======
+function renderStats(){
+var bars=document.getElementById('stats-bars'),rank=document.getElementById('stats-rank');
+bars.innerHTML='';rank.innerHTML='';
+MATRIX.subjects.forEach(function(sub){var dn=0;MATRIX.reports.forEach(function(r){if(r.subject_code===sub.code&&r.is_complete===1)dn++});var ttl=MATRIX.students.filter(function(s){return s.status==='active'}).length,pct=ttl>0?Math.round(dn/ttl*100):0;
+bars.innerHTML+='<div style="margin-bottom:0.75rem"><div style="display:flex;justify-content:space-between;font-size:0.82rem"><span>'+sub.emoji+' '+sub.name+'</span><span>'+dn+'/'+ttl+' ('+pct+'%)</span></div><div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:4px"></div></div></div>'
+});
+var active=MATRIX.students.filter(function(s){return s.status==='active'});
+var ranked=active.map(function(st){var dn=0;MATRIX.subjects.forEach(function(sub){MATRIX.reports.forEach(function(r){if(r.student_id===parseInt(st.sid)&&r.subject_code===sub.code&&r.is_complete===1)dn++})});return{name:st.nameZh,sid:st.sid,done:dn,total:MATRIX.subjects.length}}).sort(function(a,b){return b.done-a.done});
+ranked.forEach(function(s,i){var pct=Math.round(s.done/s.total*100);rank.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+s.name+'</td><td>'+s.sid+'</td><td>'+s.done+'/'+s.total+'</td><td><div style="height:6px;background:#e5e7eb;border-radius:3px"><div style="height:100%;width:'+pct+'%;background:#4f46e5;border-radius:3px"></div></div></td></tr>'})
+}
+
+// Theme
+function toggleTheme(){var h=document.documentElement,c=h.getAttribute('data-theme');h.setAttribute('data-theme',c==='dark'?'light':'dark');localStorage.setItem('report_theme',c==='dark'?'light':'dark')}
+(function(){var ts=localStorage.getItem('report_theme');if(ts)document.documentElement.setAttribute('data-theme',ts)})();
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+</script>
 </body>
 </html>
