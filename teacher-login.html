@@ -1,164 +1,116 @@
 <!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="site.title">华联中学 - 学生评语系统</title>
-  
-  <!-- Pico.css v2 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <!-- Google Fonts Outfit & Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- FontAwesome for Premium Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Custom Style overrides -->
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华联中学 - 教师登录</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{background:linear-gradient(135deg,#f0f4ff 0%,#e8f0fe 50%,#f8fafc 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-card{background:#fff;border-radius:16px;padding:2rem;max-width:420px;width:100%;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08)}
+</style>
 </head>
-<body class="login-bg">
-  <main class="container" style="max-width: 480px;">
-    
-    <!-- Top Lang Switcher -->
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="lang-switcher">
-      <button onclick="setLang('zh')" id="lang-btn-zh">中</button>
-      <button onclick="setLang('en')" id="lang-btn-en">EN</button>
-      <button onclick="setLang('ms')" id="lang-btn-ms">BM</button>
-    </div>
+<body>
+<main style="max-width:420px;width:100%;padding:1rem">
+<div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+<button onclick="sl('zh')" id="lz" style="padding:4px 12px;border-radius:20px;font-size:0.8rem;background:transparent;border:1px solid #d1d5db;margin:0 2px">中</button>
+<button onclick="sl('en')" id="le" style="padding:4px 12px;border-radius:20px;font-size:0.8rem;background:transparent;border:1px solid #d1d5db;margin:0 2px">EN</button>
+<button onclick="sl('ms')" id="lm" style="padding:4px 12px;border-radius:20px;font-size:0.8rem;background:transparent;border:1px solid #d1d5db;margin:0 2px">BM</button>
+</div>
 
-    <!-- Login Card -->
-    <article class="premium-card">
-      <header style="text-align: center; border-bottom: none; padding-bottom: 0;">
-        <i class="fa-solid fa-graduation-cap" style="font-size: 3rem; color: var(--pico-primary); margin-bottom: 0.5rem;"></i>
-        <h2 data-i18n="login.title" style="margin-bottom: 0.5rem; font-weight: 800;">教师登录</h2>
-        <p data-i18n="login.subtitle" style="font-size: 0.85rem; color: #718096;">多教师协作学生评语录入系统</p>
-      </header>
+<div class="login-card">
+<div style="text-align:center;margin-bottom:1.5rem">
+<i class="fa-solid fa-graduation-cap" style="font-size:2.5rem;color:#1a56db;margin-bottom:0.5rem"></i>
+<h2 style="margin:0;font-weight:800">华联中学</h2>
+<p style="color:#6b7280;font-size:0.85rem;margin:0.25rem 0 0 0">初二爱班 · 学生评语系统</p>
+</div>
 
-      <form id="login-form">
-        <!-- Error Alert -->
-        <div id="error-alert" style="display: none; padding: 0.75rem; border-radius: 8px; background: #fee2e2; color: #b91c1c; font-size: 0.85rem; margin-bottom: 1rem; border: 1px solid #fca5a5;">
-          <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-msg"></span>
-        </div>
+<div id="err" style="display:none;padding:8px 12px;background:#fee2e2;color:#b91c1c;border-radius:8px;font-size:0.82rem;margin-bottom:1rem"></div>
 
-        <label for="username">
-          <span data-i18n="login.username">选择账号</span>
-          <select id="username" required>
-            <option value="">-- 请选择账号 / Select Account --</option>
-          </select>
-        </label>
+<label style="font-weight:600;font-size:0.9rem">选择账号</label>
+<select id="un" style="margin-bottom:0.75rem">
+<option value="">-- 请选择 --</option>
+<option value="form_teacher">👑 班主任 (Form Teacher)</option>
+<option value="chinese_t">📖 华文老师 (Chinese)</option>
+<option value="malay_t">📝 国文老师 (Malay)</option>
+<option value="english_t">🌐 英文老师 (English)</option>
+<option value="math_t">🔢 数学老师 (Math)</option>
+<option value="geography_t">🌍 地理老师 (Geography)</option>
+<option value="history_t">🏛️ 历史老师 (History)</option>
+<option value="science_t">🔬 综合科学老师 (Science)</option>
+<option value="computer_t">💻 电脑老师 (Computer)</option>
+<option value="art_t">🎨 美术老师 (Art)</option>
+<option value="pe_t">⚽ 体育老师 (PE)</option>
+<option value="robotics_t">🤖 机器人老师 (Robotics)</option>
+</select>
 
-        <label for="password">
-          <span data-i18n="login.password">密码</span>
-          <input type="password" id="password" autocomplete="current-password" required>
-        </label>
+<label style="font-weight:600;font-size:0.9rem">密码</label>
+<input type="password" id="pw" style="margin-bottom:1rem">
 
-        <label for="remember" style="margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-          <input type="checkbox" id="remember" style="margin-bottom: 0;">
-          <span style="font-size: 0.85rem;">记住我 / Remember Me</span>
-        </label>
+<label style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;cursor:pointer">
+<input type="checkbox" id="rm" style="margin:0"> <span style="font-size:0.85rem">记住我 / Remember Me</span>
+</label>
 
-        <button type="submit" id="submit-btn">
-          <i class="fa-solid fa-right-to-bracket"></i> <span data-i18n="login.button">登录</span>
-        </button>
-      </form>
-    </article>
+<button id="btn" onclick="doLogin()" style="width:100%;padding:10px;font-weight:700">
+<i class="fa-solid fa-right-to-bracket"></i> 登录
+</button>
+</div>
 
-    <footer style="text-align: center; font-size: 0.8rem; color: #718096; margin-top: 1rem;" data-i18n="login.footer">
-      © 2026 华联中学 · Hua Lian High School
-    </footer>
-  </main>
+<footer style="text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:1rem">
+© 2026 华联中学 · Hua Lian High School
+</footer>
+</main>
 
-  <!-- JS Modules -->
-  <script src="js/auth.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/report-api.js"></script>
-  <script>
-    // Populate teacher dropdown — hardcoded for reliability
-    function populateTeacherDropdown() {
-      const sel = document.getElementById('username');
-      const teachers = [
-        { u:'form_teacher', n:'👑 班主任 (Form Teacher)', p:'2026' },
-        { u:'chinese_t', n:'📖 华文老师 (Chinese)', p:'1001' },
-        { u:'malay_t', n:'📝 国文老师 (Malay)', p:'1002' },
-        { u:'english_t', n:'🌐 英文老师 (English)', p:'1003' },
-        { u:'math_t', n:'🔢 数学老师 (Math)', p:'1004' },
-        { u:'geography_t', n:'🌍 地理老师 (Geography)', p:'1005' },
-        { u:'history_t', n:'🏛️ 历史老师 (History)', p:'1006' },
-        { u:'science_t', n:'🔬 科学老师 (Science)', p:'1007' },
-        { u:'computer_t', n:'💻 电脑老师 (Computer)', p:'1011' },
-        { u:'art_t', n:'🎨 美术老师 (Art)', p:'1012' },
-        { u:'pe_t', n:'⚽ 体育老师 (PE)', p:'1013' },
-        { u:'robotics_t', n:'🤖 机器人老师 (Robotics)', p:'1402' }
-      ];
-      teachers.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.u;
-        opt.textContent = t.n;
-        sel.appendChild(opt);
-      });
-    }
+<script>
+// --- I18N ---
+function gl(){return localStorage.getItem('report_lang')||'zh'}
+function sl(l){localStorage.setItem('report_lang',l);['zh','en','ms'].forEach(x=>{const b=document.getElementById('l'+x[0]);if(b)b.style.borderColor=x===l?'#1a56db':'#d1d5db';b.style.background=x===l?'#1a56db':'transparent';b.style.color=x===l?'#fff':'#374151'});}
+(function(){sl(gl())})();
 
-    // Set UI active language button on load
-    document.addEventListener('DOMContentLoaded', async () => {
-      const activeLang = getLang();
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + activeLang);
-      if (activeBtn) activeBtn.classList.add('active');
+// --- PASSWORD MAP ---
+const PW={'form_teacher':'2026','chinese_t':'1001','malay_t':'1002','english_t':'1003','math_t':'1004','geography_t':'1005','history_t':'1006','science_t':'1007','computer_t':'1011','art_t':'1012','pe_t':'1013','robotics_t':'1402'};
+const ROLE={'form_teacher':'form_teacher','chinese_t':'teacher','malay_t':'teacher','english_t':'teacher','math_t':'teacher','geography_t':'teacher','history_t':'teacher','science_t':'teacher','computer_t':'teacher','art_t':'teacher','pe_t':'teacher','robotics_t':'teacher'};
+const NAME={'form_teacher':{zh:'班主任',en:'Form Teacher',ms:'Guru Kelas'},'chinese_t':{zh:'华文老师',en:'Chinese Teacher',ms:'Guru Bahasa Cina'},'malay_t':{zh:'国文老师',en:'Malay Teacher',ms:'Guru Bahasa Melayu'},'english_t':{zh:'英文老师',en:'English Teacher',ms:'Guru Bahasa Inggeris'},'math_t':{zh:'数学老师',en:'Math Teacher',ms:'Guru Matematik'},'geography_t':{zh:'地理老师',en:'Geography Teacher',ms:'Guru Geografi'},'history_t':{zh:'历史老师',en:'History Teacher',ms:'Guru Sejarah'},'science_t':{zh:'综合科学老师',en:'Science Teacher',ms:'Guru Sains'},'computer_t':{zh:'电脑老师',en:'Computer Teacher',ms:'Guru Komputer'},'art_t':{zh:'美术老师',en:'Art Teacher',ms:'Guru Seni'},'pe_t':{zh:'体育老师',en:'PE Teacher',ms:'Guru PJPK'},'robotics_t':{zh:'机器人老师',en:'Robotics Teacher',ms:'Guru Robotik'}};
 
-      await populateTeacherDropdown();
+// --- LOGIN ---
+async function doLogin(){
+const un=document.getElementById('un').value,pw=document.getElementById('pw').value,rm=document.getElementById('rm').checked,er=document.getElementById('err'),btn=document.getElementById('btn');
+if(!un||!pw){er.textContent='请选择账号并输入密码';er.style.display='block';return}
+er.style.display='none';btn.disabled=true;btn.setAttribute('aria-busy','true');
 
-      // Auto redirect if already logged in
-      if (getToken() && getUser()) {
-        redirectToDashboard();
-      }
-    });
+// Check password against built-in map
+if(PW[un]&&PW[un]===pw){
+const user={username:un,display_name:NAME[un].zh,display_name_en:NAME[un].en,display_name_ms:NAME[un].ms,role:ROLE[un],subjects:un==='form_teacher'?['*']:[]};
+const token='local_'+btoa(un+':'+Date.now());
+if(rm){localStorage.setItem('report_token',token);localStorage.setItem('report_user',JSON.stringify(user))}
+else{sessionStorage.setItem('report_token',token);sessionStorage.setItem('report_user',JSON.stringify(user))}
+sessionStorage.setItem('force_offline','1');
+if(user.role==='form_teacher'){window.location.href='teacher-report.html'}
+else{window.location.href='teacher-report.html'}
+return
+}
 
-    // Listen to lang changes to toggle active button state
-    document.addEventListener('langChanged', (e) => {
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + e.detail.lang);
-      if (activeBtn) activeBtn.classList.add('active');
-    });
+// Also try class-config.json
+try{
+const r=await fetch('class-config.json');const cfg=await r.json();
+const t=(cfg.teachers||[]).find(t=>t.username===un&&t.password===pw);
+if(t){
+const user={username:t.username,display_name:t.name,display_name_en:t.name_en,display_name_ms:t.name_ms,role:t.role,subjects:t.subjects};
+const token='local_'+btoa(un+':'+Date.now());
+if(rm){localStorage.setItem('report_token',token);localStorage.setItem('report_user',JSON.stringify(user))}
+else{sessionStorage.setItem('report_token',token);sessionStorage.setItem('report_user',JSON.stringify(user))}
+sessionStorage.setItem('force_offline','1');
+window.location.href='teacher-report.html';return
+}
+}catch(e){}
 
-    function redirectToDashboard() {
-      const user = getUser();
-      if (user && user.role === 'form_teacher') {
-        window.location.href = 'form-teacher.html';
-      } else {
-        window.location.href = 'teacher-report.html';
-      }
-    }
+er.textContent='密码错误，请重试';er.style.display='block';btn.disabled=false;btn.removeAttribute('aria-busy')
+}
 
-    // Handle Form Submit
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const usernameInput = document.getElementById('username').value;
-      const passwordInput = document.getElementById('password').value;
-      const rememberInput = document.getElementById('remember').checked;
-      const errorAlert = document.getElementById('error-alert');
-      const errorMsg = document.getElementById('error-msg');
-      const submitBtn = document.getElementById('submit-btn');
-
-      if (!usernameInput || !passwordInput) {
-        errorMsg.textContent = '请选择账号并输入密码！';
-        errorAlert.style.display = 'block';
-        return;
-      }
-
-      errorAlert.style.display = 'none';
-      submitBtn.setAttribute('aria-busy', 'true');
-      submitBtn.disabled = true;
-
-      try {
-        await ReportAPI.login(usernameInput, passwordInput, rememberInput);
-        redirectToDashboard();
-      } catch (err) {
-        errorMsg.textContent = err.message || '登录失败，请检查账号和密码';
-        errorAlert.style.display = 'block';
-      } finally {
-        submitBtn.removeAttribute('aria-busy');
-        submitBtn.disabled = false;
-      }
-    });
-  </script>
+// Auto-redirect if logged in
+(function(){const tk=sessionStorage.getItem('report_token')||localStorage.getItem('report_token');const us=sessionStorage.getItem('report_user')||localStorage.getItem('report_user');if(tk&&us){window.location.href='teacher-report.html'}})();
+</script>
 </body>
 </html>
