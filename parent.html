@@ -1,279 +1,37 @@
 <!DOCTYPE html>
 <html lang="zh" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="site.title">学生评语报告单</title>
-  
-  <!-- Pico.css v2 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <!-- Google Fonts Outfit & Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- FontAwesome for Premium Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Custom Style overrides -->
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华联中学 - 学生评语报告</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+<style>
+body{font-family:'Outfit','Inter',system-ui,sans-serif;background:#f8fafc}
+.card{max-width:800px;margin:1.5rem auto;background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.header-row{display:flex;align-items:center;gap:1rem;border-bottom:2px solid #1a56db;padding-bottom:1rem;margin-bottom:1.5rem}
+.header-row img{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#e5e7eb}
+@media print{body{background:#fff}.card{box-shadow:none;padding:0}button{display:none!important}}
+</style>
 </head>
-<body style="background-color: #f1f5f9; min-height: 100vh; display: flex; flex-direction: column;">
-
-  <!-- Main Container -->
-  <main class="container report-card-container" style="flex: 1;">
-    
-    <!-- Top Lang Switcher & Print Control (Hidden in Print) -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;" class="print-control-bar">
-      <!-- Language Selector -->
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 0.8rem; font-weight:600; color:#475569;" data-i18n="parent.lang_select">Language / 语言:</span>
-        <div class="lang-switcher" style="display: inline-flex;">
-          <button onclick="setLang('zh')" id="lang-btn-zh" style="margin: 0 2px;">中</button>
-          <button onclick="setLang('en')" id="lang-btn-en" style="margin: 0 2px;">EN</button>
-          <button onclick="setLang('ms')" id="lang-btn-ms" style="margin: 0 2px;">BM</button>
-        </div>
-      </div>
-
-      <!-- Print Button -->
-      <button class="primary outline print-btn" style="padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 0;" onclick="window.print()">
-        <i class="fa-solid fa-print"></i> <span data-i18n="parent.print">打印报告单 / Print</span>
-      </button>
-    </div>
-
-    <!-- Error Block (Hidden by default) -->
-    <article id="error-block" class="premium-card" style="display: none; text-align: center; padding: 3rem;">
-      <i class="fa-solid fa-circle-exclamation" style="font-size: 4rem; color: #ef4444; margin-bottom: 1.5rem;"></i>
-      <h3 data-i18n="parent.error.invalid" style="font-weight: 800;">无效的访问链接或报告尚未发布，请联系班主任！</h3>
-      <p style="color: #718096; font-size: 0.95rem;">Invalid access link or report not published. Please verify with the school.</p>
-    </article>
-
-    <!-- Rate Limited Block (Hidden by default) -->
-    <article id="rate-limit-block" class="premium-card" style="display: none; text-align: center; padding: 3rem;">
-      <i class="fa-solid fa-triangle-exclamation" style="font-size: 4rem; color: #f59e0b; margin-bottom: 1.5rem;"></i>
-      <h3 data-i18n="parent.limit.title" style="font-weight: 800; color: #d97706;">访问受限 / Access Restricted</h3>
-      <p data-i18n="parent.limit.desc" style="color: #718096; font-size: 0.95rem;">由于您的请求过于频繁，系统已临时限制访问。请在 1 分钟后重新刷新页面。</p>
-    </article>
-
-    <!-- Loading Spinner -->
-    <article id="loading-block" style="text-align: center; padding: 5rem; border: none; background: transparent; box-shadow: none;">
-      <div aria-busy="true" style="font-size: 1.2rem; color: var(--pico-primary);">Loading student report card...</div>
-    </article>
-
-    <!-- REPORT CARD SHEET (Shown when data successfully loaded) -->
-    <article id="report-sheet" class="premium-card" style="display: none; padding: 2.5rem; background: white;">
-      
-      <!-- Report Header -->
-      <header class="report-header">
-        <i class="fa-solid fa-school" style="font-size: 3rem; color: var(--pico-primary); margin-bottom: 0.75rem;"></i>
-        <h1 id="school-name">华联中学</h1>
-        <p class="sub" data-i18n="parent.report_card" style="font-weight: 700; letter-spacing: 0.1em; color: #475569; font-size: 1.1rem; text-transform: uppercase;">
-          学生分科评语报告 / Student Performance Report
-        </p>
-      </header>
-
-      <!-- Student Profile details -->
-      <div class="student-profile-container" style="background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 2rem; padding: 1.5rem;">
-        <!-- Circular Student Photo -->
-        <div id="student-avatar" class="student-avatar" style="width: 100px; height: 100px; font-size: 2.2rem; border-color: #3b82f6;"></div>
-        
-        <div style="flex: 1;">
-          <h2 id="student-name" style="margin: 0 0 0.25rem 0; font-weight: 800; color: #1e293b;"></h2>
-          <h4 id="student-name-en" style="margin: 0 0 1rem 0; color: #64748b; font-size: 1.1rem; font-weight: 500;"></h4>
-          
-          <div class="student-info-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-            <div class="student-info-item">
-              <span class="label" data-i18n="parent.info.no">学号 (Student ID):</span>
-              <span id="student-number" style="font-weight: 600; color: #1e293b;"></span>
-            </div>
-            <div class="student-info-item">
-              <span class="label" data-i18n="parent.info.class">就读班级 (Class):</span>
-              <span id="student-class" style="font-weight: 600; color: #1e293b;"></span>
-            </div>
-            <div class="student-info-item">
-              <span class="label" data-i18n="parent.info.gender">学生性别 (Gender):</span>
-              <span id="student-gender" style="font-weight: 600; color: #1e293b;"></span>
-            </div>
-            <div class="student-info-item">
-              <span class="label" data-i18n="parent.info.boarding">住宿状态 (Hostel):</span>
-              <span id="student-boarding" style="font-weight: 600; color: #1e293b;"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comments Grid Table -->
-      <table class="striped parent-report-table" style="margin-bottom: 2rem;">
-        <thead>
-          <tr>
-            <th data-i18n="parent.subject" style="width: 200px;">学科 / Subject</th>
-            <th data-i18n="parent.feedback">任课老师评语 / Teacher's Comments</th>
-          </tr>
-        </thead>
-        <tbody id="comments-table-body">
-          <!-- Dynamic comments loaded here -->
-        </tbody>
-      </table>
-
-      <!-- Footer Signature lines -->
-      <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end;">
-        <div style="text-align: center; width: 200px;">
-          <div style="border-bottom: 1px solid #94a3b8; height: 50px;"></div>
-          <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-weight: 500;">家长签阅 / Parent's Signature</p>
-        </div>
-        
-        <div style="text-align: center; width: 200px;">
-          <div style="border-bottom: 1px solid #94a3b8; height: 50px; display:flex; align-items:flex-end; justify-content:center;">
-            <span style="font-size: 0.95rem; font-weight: 700; color: #3b82f6; font-family:'Outfit';">SCHOOL SEAL</span>
-          </div>
-          <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-weight: 500;">校印 / School Seal</p>
-        </div>
-
-        <div style="text-align: center; width: 200px;">
-          <div style="border-bottom: 1px solid #94a3b8; height: 50px; display:flex; align-items:flex-end; justify-content:center; font-weight:600; font-size:0.85rem; color:#475569;">
-            SM HUA LIAN
-          </div>
-          <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-weight: 500;">班主任签发 / Form Teacher</p>
-        </div>
-      </footer>
-    </article>
-  </main>
-
-  <footer style="text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #94a3b8; background: #f8fafc; border-top: 1px solid #e2e8f0;" class="print-control-bar" data-i18n="login.footer">
-    © 2026 华联中学 · Hua Lian High School
-  </footer>
-
-  <!-- JS Modules -->
-  <!-- Note that parent.html loads local scripts directly, but does NOT require auth.js since it's anonymous -->
-  <!-- Therefore we define WORKER_URL inside parent directly or load from auth.js if we want configuration -->
-  <script src="js/auth.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/report-api.js"></script>
-  <script>
-    let reportData = null;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      // Toggle language buttons on load
-      const activeLang = getLang();
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + activeLang);
-      if (activeBtn) activeBtn.classList.add('active');
-
-      // Fetch parent view token from query parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-
-      if (!code || code.length !== 8) {
-        showBlock('error-block');
-        return;
-      }
-
-      loadParentReportCard(code);
-    });
-
-    document.addEventListener('langChanged', (e) => {
-      document.querySelectorAll('.lang-switcher button').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('lang-btn-' + e.detail.lang);
-      if (activeBtn) activeBtn.classList.add('active');
-      
-      renderReportSheet();
-    });
-
-    async function loadParentReportCard(code) {
-      try {
-        reportData = await ReportAPI.getParentReport(code);
-        renderReportSheet();
-        showBlock('report-sheet');
-      } catch (err) {
-        if (err.rate_limited) {
-          showBlock('rate-limit-block');
-        } else {
-          showBlock('error-block');
-        }
-      }
-    }
-
-    function showBlock(blockId) {
-      document.getElementById('loading-block').style.display = 'none';
-      document.getElementById('error-block').style.display = 'none';
-      document.getElementById('rate-limit-block').style.display = 'none';
-      document.getElementById('report-sheet').style.display = 'none';
-
-      document.getElementById(blockId).style.display = 'block';
-    }
-
-    function renderReportSheet() {
-      if (!reportData) return;
-
-      const student = reportData.student;
-      
-      // Update School Name
-      document.getElementById('school-name').textContent = reportData.schoolName;
-
-      // Update student profile info
-      document.getElementById('student-name').textContent = student.name;
-      document.getElementById('student-name-en').textContent = student.name_en;
-      document.getElementById('student-number').textContent = student.student_number;
-      
-      // Class translation display
-      let classText = student.class_name;
-      if (getLang() === 'en') classText = student.class_name_en;
-      else if (getLang() === 'ms') classText = student.class_name_ms;
-      document.getElementById('student-class').textContent = classText;
-
-      document.getElementById('student-gender').textContent = student.gender === 'M' ? t('report.gender.m') : t('report.gender.f');
-      document.getElementById('student-boarding').textContent = student.is_boarding ? t('report.boarding.yes') : t('report.boarding.no');
-
-      // Profile avatar load or initials
-      const avatar = document.getElementById('student-avatar');
-      avatar.textContent = student.name.substring(0, 1);
-      avatar.style.background = getAvatarColor(student.student_number);
-      
-      // Check if photo exists in directory by loading it
-      const img = new Image();
-      img.onload = function() {
-        avatar.innerHTML = '';
-        avatar.style.backgroundImage = `url('${student.photo_url}')`;
-        avatar.style.backgroundSize = 'cover';
-        avatar.style.backgroundPosition = 'center';
-      };
-      img.src = student.photo_url; // triggers load attempt
-
-      // Render reports table
-      const body = document.getElementById('comments-table-body');
-      body.innerHTML = '';
-
-      const reports = reportData.reports || [];
-      if (reports.length === 0) {
-        body.innerHTML = `
-          <tr>
-            <td colspan="2" style="text-align: center; color: #94a3b8; padding: 2rem;">
-              （暂无已发布的科目评语 / No comments published yet）
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      reports.forEach(r => {
-        let subName = r.display_name;
-        if (getLang() === 'en') subName = r.display_name_en;
-        else if (getLang() === 'ms') subName = r.display_name_ms;
-
-        if (r.emoji) {
-          subName = r.emoji + ' ' + subName;
-        }
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight: 600; color: #334155;">${subName}</td>
-          <td style="white-space: pre-wrap; color: #1e293b; font-size: 0.95rem;">${r.feedback || '-'}</td>
-        `;
-        body.appendChild(tr);
-      });
-    }
-
-    function getAvatarColor(studentNo) {
-      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e'];
-      const index = parseInt(studentNo) % colors.length || 0;
-      return colors[index];
-    }
-  </script>
+<body>
+<div class="card" id="content"><div style="text-align:center;padding:3rem">⏳ 加载中...</div></div>
+<script>
+(function(){
+var code=new URLSearchParams(window.location.search).get('code');
+if(!code){document.getElementById('content').innerHTML='<div style="text-align:center;padding:3rem;color:#dc2626">❌ 无效链接 — Invalid Link</div>';return}
+var codes=JSON.parse(localStorage.getItem('parent_codes_2026')||'{}');
+var studentId=null;
+Object.keys(codes).forEach(function(k){if(codes[k]===code)studentId=k});
+if(!studentId){document.getElementById('content').innerHTML='<div style="text-align:center;padding:3rem;color:#dc2626">❌ 访问码无效 — Invalid Code</div>';return}
+fetch('class-config.json').then(function(r){return r.json()}).then(function(cfg){
+var st=(cfg.students||[]).find(function(s){return s.studentId===studentId});
+if(!st){document.getElementById('content').innerHTML='<div style="text-align:center;padding:3rem">学生资料未找到</div>';return}
+var yr=cfg.currentAcademicYear||'2026',subs=cfg.subjects||[];
+var html='<div class="header-row"><img src="photos/'+st.studentId+'.jpg" onerror="this.style.display=\'none\'" alt=""><div><h2 style="margin:0">'+st.nameZh+'</h2><p style="color:#6b7280;margin:0">'+st.nameEn+'</p><p style="font-size:0.85rem;color:#9ca3af;margin:0">班级: 初二爱 | 学号: '+st.studentId+' | '+(st.gender==='M'?'男':'女')+'</p></div></div>';
+html+='<table><thead><tr><th>#</th><th>科目</th><th>评语</th><th>状态</th></tr></thead><tbody>';
+subs.forEach(function(sub,i){var k='r_'+yr+'_'+st.studentId+'_'+sub.code,saved=JSON.parse(localStorage.getItem(k)||'null');var fb=saved?saved.feedback:'',done=saved&&saved.isComplete===1;html+='<tr><td>'+(i+1)+'</td><td>'+sub.emoji+' '+sub.name+'</td><td>'+(fb||'<span style="color:#9ca3af">— 暂无 —</span>')+'</td><td><span style="color:'+(done?'#16a34a':'#9ca3af')+'">'+(done?'✅ 已完成':'⏳ 待完成')+'</span></td></tr>'});
+html+='</tbody></table><p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:1.5rem">华联中学 · 初二爱班 · 2026年度学生评语报告</p><div style="text-align:center;margin-top:1rem"><button onclick="window.print()">🖨️ 打印</button></div>';
+document.getElementById('content').innerHTML=html}).catch(function(){document.getElementById('content').innerHTML='<div style="text-align:center;padding:3rem;color:#dc2626">加载失败，请重试</div>'})})();
+</script>
 </body>
 </html>
