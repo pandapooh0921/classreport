@@ -70,7 +70,7 @@
 // --- I18N ---
 const I18N={zh:{subject:'科目',progress:'进度',search:'搜索学生...',export:'导出CSV',chpwd:'修改密码',cancel:'取消',save:'修改密码',oldPwd:'原密码',newPwd:'新密码',confirmPwd:'确认新密码',pwdMismatch:'两次密码不一致',pwdOk:'密码修改成功！',logout:'退出',dashboard:'班主任后台',noSubject:'你没有被分配任何科目。请联系班主任。',studentId:'学号',gender:'性别',male:'男',female:'女',hostelYes:'🏠寄宿',hostelNo:'🚶通勤',sibling:'兄妹',done:'已完成',pending:'未完成',placeholder:'输入评语...',total:'学生'},en:{subject:'Subject',progress:'Progress',search:'Search students...',export:'Export CSV',chpwd:'Change Password',cancel:'Cancel',save:'Save',oldPwd:'Current Password',newPwd:'New Password',confirmPwd:'Confirm Password',pwdMismatch:'Passwords do not match',pwdOk:'Password changed!',logout:'Logout',dashboard:'Dashboard',noSubject:'No subjects assigned. Contact form teacher.',studentId:'ID',gender:'Gender',male:'Male',female:'Female',hostelYes:'🏠 Boarder',hostelNo:'🚶 Commuter',sibling:'Siblings',done:'Done',pending:'Pending',placeholder:'Enter comment...',total:'students'},ms:{subject:'Subjek',progress:'Kemajuan',search:'Cari pelajar...',export:'Eksport CSV',chpwd:'Tukar Kata Laluan',cancel:'Batal',save:'Simpan',oldPwd:'Kata Laluan Lama',newPwd:'Kata Laluan Baru',confirmPwd:'Sahkan',pwdMismatch:'Kata laluan tidak sepadan',pwdOk:'Kata laluan berjaya ditukar!',logout:'Log Keluar',dashboard:'Dashboard',noSubject:'Tiada subjek. Hubungi guru kelas.',studentId:'ID',gender:'Jantina',male:'Lelaki',female:'Perempuan',hostelYes:'🏠 Asrama',hostelNo:'🚶 Ulang-alik',sibling:'Adik-beradik',done:'Selesai',pending:'Belum',placeholder:'Tulis ulasan...',total:'pelajar'}};
 function gl(){return localStorage.getItem('report_lang')||'zh'}
-function sl(l){localStorage.setItem('report_lang',l);updateLangUI();render()}
+function sl(l){localStorage.setItem('report_lang',l);updateLangUI();renderTabs();render()}
 function t(k){const lang=gl();return (I18N[lang]&&I18N[lang][k])||I18N.zh[k]||k}
 function updateLangUI(){const lang=gl();['zh','en','ms'].forEach(l=>{const b=document.getElementById('l'+l[0]);if(b)b.classList.toggle('active',l===lang)});document.title='华联中学 - '+(lang==='en'?'Reports':lang==='ms'?'Laporan':'学生评语')}
 
@@ -113,7 +113,7 @@ renderTabs();selectSub(0);
 })();
 
 // --- RENDER ---
-function renderTabs(){document.getElementById('tabs').innerHTML=SUBS.map((s,i)=>{const lang=gl();let nm=s.name;if(lang==='en')nm=s.name_en;if(lang==='ms')nm=s.name_ms;const dn=s.students.filter(st=>st.isComplete===1).length;return'<span class="s-tab" onclick="selectSub('+i+')" id="tb'+i+'">'+s.emoji+' '+nm+' <small>'+dn+'/'+s.students.length+'</small></span>'}).join('')}
+function renderTabs(){const lang=gl();if(SUBS.length===1){const s=SUBS[0];let nm=s.name;if(lang==='en')nm=s.name_en;if(lang==='ms')nm=s.name_ms;document.getElementById('tabs').innerHTML='<h3 style="margin:0">'+s.emoji+' '+nm+'</h3>';return}document.getElementById('tabs').innerHTML=SUBS.map((s,i)=>{let nm=s.name;if(lang==='en')nm=s.name_en;if(lang==='ms')nm=s.name_ms;const dn=s.students.filter(st=>st.isComplete===1).length;return'<span class="s-tab" onclick="selectSub('+i+')" id="tb'+i+'">'+s.emoji+' '+nm+' <small>'+dn+'/'+s.students.length+'</small></span>'}).join('')}
 function selectSub(i){curSub=i;document.querySelectorAll('.s-tab').forEach((el,j)=>el.classList.toggle('on',j===i));render()}
 function render(){
 if(SUBS.length===0)return;
@@ -123,7 +123,7 @@ const lang=gl();
 document.getElementById('rows').innerHTML=filtered.map((st,i)=>{
 const done=st.isComplete===1;
 let meta=t('studentId')+': '+st.sid+' | '+t('gender')+': '+(st.gender==='M'?t('male'):t('female'));
-if(isFT){meta+=' | '+(st.hostel?t('hostelYes'):t('hostelNo'));if(st.siblings)meta+=' | '+t('sibling')+': '+st.siblings}
+if(isFT){meta+=' | '+(st.hostel?t('hostelYes'):t('hostelNo'));if(st.fatherPhone)meta+=' | 父:'+st.fatherPhone;if(st.motherPhone)meta+=' | 母:'+st.motherPhone;if(st.siblings)meta+=' | '+t('sibling')+': '+st.siblings}
 return'<div class="s-row'+(done?' done':'')+'" id="rw'+st.sid+'"><div class="n">'+(i+1)+'</div><div class="ph" style="background:'+avc(st.sid)+'"><img src="'+st.photo+'" onerror="this.style.display=\'none\';this.parentElement.textContent=\''+st.nameZh.charAt(0)+'\'" loading="lazy"></div><div class="inf"><div class="nm">'+st.nameZh+'</div><div class="mt">'+st.nameEn+'</div><div class="mt">'+meta+'</div></div><div class="fb"><textarea id="ta'+st.sid+'" placeholder="'+t('placeholder')+'" oninput="onType(\''+st.sid+'\')" onblur="onBlur(\''+st.sid+'\')">'+esc(st.feedback)+'</textarea></div><div class="st"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+(done?'#16a34a':'#e5e7eb;border:2px solid #d1d5db')+'" id="dt'+st.sid+'"></span></div></div>'}).join('');
 document.getElementById('sc').textContent=filtered.length+'/'+sub.students.length+' '+t('total');
 updateProg()}
